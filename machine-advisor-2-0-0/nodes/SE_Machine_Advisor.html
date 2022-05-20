@@ -1,0 +1,733 @@
+<!--Register Node Type-->
+
+<style>
+    .whiteColor {
+        fill: #000;
+        font-family: Nunito Regular;
+    }
+
+    /*
+box-shadow: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+*/
+    .maBtn {
+        width: 88px;
+        margin-right: 16px;
+        border-width: 0px;
+        border-radius: 3px;
+        height: 36px;
+        color: white;
+        font-family: sans-serif;
+        box-shadow: 0 3px 1px -2px rgba(0, 0, 0, .2), 0 2px 2px 0 rgba(0, 0, 0, .14), 0 1px 5px 0 rgba(0, 0, 0, .12);
+    }
+
+    .maBtn-green {
+        background-color: #3dcd58;
+    }
+
+    .maBtn-blue {
+        background-color: #315d79;
+    }
+
+    .maBtn-gray {
+        background-color: #DCDCDC;
+        color: #6E6E6E;
+    }
+
+
+    .ul-list,
+    .ul-transportlist {
+        list-style-type: none;
+        margin: -43px 0 0 0;
+        /* change padding for UI fix */
+        padding: 0 0 0 63px; 
+        border: 0px solid;
+    }
+
+    .ul-list li,
+    .ul-transportlist li {
+        float: left;
+        margin: 0 25px 10px 0;
+        width: 100px;
+        height: 40px;
+        position: relative;
+    }
+
+    .ul-list label,
+    .ul-list input,
+    .ul-transportlist label,
+    .ul-transportlist input {
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 66px;
+        right: 0;
+        bottom: 0;
+        color: #FFFFFF;
+    }
+
+    .ul-list input[type="radio"],
+    .ul-transportlist input[type="radio"] {
+        opacity: 0.01;
+        z-index: 100;
+        width: 110px;
+        height: 30px;
+    }
+
+    .ul-list input[type="radio"]:checked+label,
+    .Checked+label,
+    .ul-transportlist input[type="radio"]:checked+label {
+        background: #3dcd58;
+        border-color: #3dcd58;
+        color: #FFFFFF !important;
+    }
+
+    .ul-list label {
+        padding: 5px;
+        border: 1px solid #DCDCDC;
+        cursor: pointer;
+        z-index: 90;
+        border-radius: 5px;
+        background-color: #DCDCDC;
+        color: #3D3D3D;
+        text-align: center;
+        user-select: none;
+        /* font-family: "Assistant,sans-serif"; */
+        font-weight: 900;
+    }
+
+    .ul-transportlist label {
+        padding: 5px;
+        border: 1px solid #315d79;
+        cursor: pointer;
+        z-index: 90;
+        border-radius: 5px;
+        background-color: #315d79;
+        text-align: center;
+        user-select: none;
+        /* font-family: "Assistant,sans-serif"; */
+        font-weight: 900;
+    }
+</style>
+
+<script type="text/javascript">
+
+
+
+
+    RED.nodes.registerType('SE_Machine_Advisor', {
+        category: "Cloud Storage",
+        color: "#fff",
+
+        credentials: {
+            token: {
+                value: "", type: "password", validate: function (val) {
+
+                    if (this.transport.indexOf("http") > -1 && val.length > 0) {
+                        return true;
+                    }
+                    else if (this.transport.indexOf('mqtt') > -1) {
+                        return true;
+                    }
+                }
+            },
+
+            userName: {
+                value: "", type: "text", validate: function (val) {
+                    if (this.transport.indexOf('http') > -1) {
+                        return true;
+                    }
+                    else if (val.length > 0 && val.indexOf(" ") < 0) {
+                        return true;
+                    }
+                }
+            },
+            password: {
+                value: "", type: "password", validate: function (val) {
+                    if (this.transport.indexOf('http') > -1) {
+                        return true;
+                    }
+                    else if (val.length > 0) {
+                        return true;
+                    }
+                }
+            },
+
+            // token: {type:"password"}
+        },
+
+
+
+        defaults: {
+            name: { value: "" },
+            version: { value: "2.0.0" },
+            url: {
+                value: "", validate: function (val) {
+                    if (val.indexOf("http") == 0 && this.transport.indexOf('http') > -1 && val.indexOf(" ") < 0) {
+                        return true;
+                    }
+                    else if (this.transport.indexOf('mqtt') > -1) {
+                        return true;
+                    }
+
+                }
+            },
+
+            useProxy: { value: "no" },
+            proxy: {
+                value: "", validate: function (val) {
+                    if (this.transport.indexOf("http") > -1 && this.useProxy.indexOf("yes") > -1 && val.indexOf("http") > -1) {
+                        return true;
+                    }
+                    else if (this.transport.indexOf('mqtt') > -1 || this.useProxy.indexOf("yes") < 0) {
+                        return true;
+                    }
+                }
+            },
+            machCldDataId: { value: "" },
+            // add:{value:"1"},
+
+            add: {
+                value: "1", validate: function (val) {
+                    if (RED.validators.number() && (val % 1) === 0 && val >= 0) {
+                        return true;
+                    }
+                }
+            },
+            transport: { value: "http" },
+            transportBtn: { value: 'http' },
+            dataType: { value: 2 },
+            dataTypeBtn: { value: 2 },
+            variablenm: { value: "variable" },
+
+            server: {
+                value: "", validate: function (val) {
+
+
+                    if (this.transport.indexOf('http') > -1) {
+                        return true;
+                    }
+                    else if (val.indexOf("mqtt") == 0) {
+                        return true;
+                    }
+                }
+            },
+            topic: {
+                value: "", validate: function (val) {
+                    if (this.transport.indexOf('http') > -1) {
+                        return true;
+                    }
+                    else if (val.length > 0) {
+                        return true;
+                    }
+                }
+            },
+            clientId: {
+                value: "", validate: function (val) {
+                    if (this.transport.indexOf('http') > -1) {
+                        return true;
+                    }
+                    else if (val.length > 0) {
+                        return true;
+                    }
+                }
+            },
+            fileSize: { value: "10" },
+            sizeUnit: { value: "MB" },
+            logging: { value: "1" },
+            loggingLevel: { value: "error" },
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "machineAdvisor.png",
+        align: "left",
+        paletteLabel: "SEMachineAdvisor",
+
+        label: function () {
+            return this.name || "SEMachineAdvisor";
+        },
+
+        oneditprepare: function () {
+            let node = this;
+
+
+
+            let useProxySelector = $('#node-input-useProxy')
+            let inputProxy = $("#proxydivision");
+
+
+            let btn1 = $("#btn_25");
+            let btn2 = $("#btn_50");
+
+            let httpBtn = $("#http-btn");
+            let mqttBtn = $("#mqtt-btn");
+            let httpDv = $("#httpDiv");
+            let mqttDv = $("#mqttDiv");
+
+            let stAddDv = $("#startAddDiv");
+            let varDv = $("#variableDiv");
+
+            let loggingSelector = $('#node-input-logging')
+            let loggingDivision = $("#loggingDivision")
+
+            loggingSelector.change(function () {
+                if (loggingSelector.val() === '1') {
+                    loggingDivision.show();
+                }
+                else {
+                    loggingDivision.hide();
+                }
+            });
+
+            // httpDv.show();
+            //mqttDv.hide();
+
+            if (this.dataType == 1) {
+                btn1[0].checked = true;
+                changeDataFormat(1);
+            }
+            else {
+                btn2[0].checked = true;
+                changeDataFormat(2);
+            }
+
+
+            if (this.transport == "http") {
+                httpBtn[0].checked = true;
+                httpDv.show();
+                mqttDv.hide();
+
+            }
+            else {
+                mqttBtn[0].checked = true;
+                httpDv.hide();
+                mqttDv.show();
+            }
+
+
+
+            btn1.change(function () {
+                node.dataType = 1;
+                node.dataTypeBtn = 1;
+                changeDataFormat(1);
+            })
+
+            btn2.change(function () {
+                node.dataTypeBtn = 2;
+                node.dataType = 2;
+                changeDataFormat(2);
+            })
+
+            mqttBtn.change(function () {
+
+                node.transport = "mqtt";
+                node.transportBtn = "mqtt";
+
+            })
+
+            httpBtn.change(function () {
+
+                node.transport = "http";
+                node.transportBtn = "http";
+
+            })
+
+            function mockValue(field) {
+                field = (field == "") ? " " : field;
+            }
+
+
+            function changeDataFormat(value) {
+                if (value == 1) {
+                    stAddDv.hide();
+                    varDv.show();
+                }
+                else {
+                    stAddDv.show();
+                    varDv.hide();
+                }
+            }
+
+            useProxySelector.change(function () {
+
+                if (useProxySelector.val() == 'yes') {
+                    inputProxy.show();
+                    node.proxy.required = true;
+                }
+                else {
+                    inputProxy.hide();
+                    node.proxy.required = false;
+                }
+            })
+
+
+
+            onDataFormatChng = function (event) {
+                this.defaults.dataType = event.target.value;
+            }
+        }
+    });
+
+    onTransportClicked = function (event) {
+
+        let httpDv = $("#httpDiv");
+        let mqttDv = $("#mqttDiv");
+
+
+        if (event.target.id.indexOf("http") > -1) {
+            httpDv.show();
+            mqttDv.hide();
+        }
+        else if (event.target.id.indexOf("mqtt") > -1) {
+            httpDv.hide();
+            mqttDv.show();
+        }
+
+
+    }
+
+    loadData = function () {
+        console.log("LOAD DATAAAA ");
+    }
+
+
+
+
+</script>
+
+<script type="text/x-red" data-template-name="SE_Machine_Advisor">
+
+    <div style="background:#32963f !important; height:25px;padding:5px;"> 
+        <label style="color:white !important; font-weight:bold !important; margin-left:35%;padding-top:1% !important"> Schneider Electric </label> 
+    </div>
+	<!--Page Break-->
+    <br>
+    
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+        <input type="text" id="node-input-name" maxlength="32" placeholder="Name" >
+    </div>
+	<div class="form-row">
+        <for="node-input-version">
+    </div>
+
+    <div class="form-row">
+        <label ><i class="fa fa-random"></i> Transport</label>
+    </div>
+
+
+
+    <div class="form-row" >
+        <ul class="ul-transportlist" id='node-input-transportBtn'   >
+            
+                <li>
+                    <input type="radio"  id="http-btn" value="http" onclick="onTransportClicked(event)"  name="transportType"   />
+                    <label >HTTPs</label>
+                </li>
+                <!-- add space between HTTP MQTT buttons -->
+                <li style="margin-left:10px;">
+                    <input type="radio" id="mqtt-btn" value="mqtt"  name="transportType" onclick="onTransportClicked(event)"  />
+                    <label  >MQTTs</label>
+                </li>
+                
+                </ul>
+</div>
+
+
+<div class="form-row">
+        <label style="padding-top:5px"><i class="fa fa-random"></i> Format</label>
+</div>
+    <div class="form-row" >
+            <ul class="ul-list" id='node-input-dataTypeBtn'   >
+                
+                    <li class="dtFormatLbl">
+                        <input type="radio"  id="btn_25" value="1"  name="dtFormat"   />
+                        <label   >Charlie</label>
+                    </li>
+                    <!-- add space between Charlie Tango buttons -->
+                    <li style="margin-left:10px;">
+                        <input type="radio" id="btn_50" value="2"  name="dtFormat"  />
+                        <label  >Tango</label>
+                    </li>
+                    
+                    </ul>
+    </div>
+
+        
+   
+    <div id="httpDiv">
+            <div class="form-row">
+                    <label for="node-input-url"><i class="fa fa-external-link"></i> Server</label>
+                    <input type="text" id="node-input-url" placeholder="URL for the Data Source">
+                </div>
+                <div class="form-row">
+                    <label for="node-input-token"><i class="fa fa-bookmark"></i> Token</label>
+                    <input type="password" id="node-input-token" placeholder="Bearer Token of the DataSource">
+                </div>
+                <div class="form-row">
+                    <label for="node-input-useProxy"><i class="fa fa-random"></i> Use Proxy</label>
+                    <select type='text' id='node-input-useProxy'> 
+                        <option value='yes'>Yes</option>
+                        <option value='no' select>No</option> 
+                    </select>
+                </div>
+                <div class="form-row" id="proxydivision">
+                    <label for="node-input-proxy"><i class="fa fa-external-link"></i> Proxy</label>
+                    <input type="text" id="node-input-proxy" placeholder="Proxy for the gateway">
+                </div>
+    </div>
+
+    <div id="mqttDiv">
+            <div class="form-row">
+                    <label for="node-input-server"><i class="fa fa-external-link"></i> Broker URL</label>
+                    <input type="text" id="node-input-server" placeholder="URL for the DataSource">
+                </div>
+                
+                <div class="form-row">
+                    <label for="node-input-topic"><i class="fa fa-external-link"></i> Topic</label>
+                    <input type="text" id="node-input-topic" placeholder="Topic">
+                </div>  
+               
+                
+                <div class="form-row">
+                    <label for="node-input-userName"><i class="fa fa-external-link"></i> Username</label>
+                    <input type="text" id="node-input-userName" placeholder="username">
+                </div>
+
+                <div class="form-row">
+                    <label for="node-input-password"><i class="fa fa-external-link"></i> Password</label>
+                    <input type="password" id="node-input-password" placeholder="Password">
+                </div>
+
+                <div class="form-row">
+                    <label for="node-input-clientId"><i class="fa fa-external-link"></i> Client Id</label>
+                    <input type="text" id="node-input-clientId" placeholder="clientId">
+                </div>
+
+
+               <!-- <div class="form-row">
+                    <label for="node-input-qos"><i class="fa fa-external-link"></i> Qos</label>
+                    <input type="text" id="node-input-qos" placeholder="Qos">
+                </div> 
+
+
+                <div class="form-row">
+                    <label for="node-input-retain"><i class="fa fa-random"></i> Retain</label>
+                    <select type='text' id='node-input-retain'> 
+                        <option value='true'>True</option>
+                        <option value='false' select>False</option> 
+                    </select>
+                </div>
+            -->
+    </div>
+    
+
+   
+
+
+    <div class="form-row" id="dataTypDiv">
+         <!-- <label for="node-input-dataType"><i class="fa fa-random"></i> Data Type</label> 
+         <select type='text' id='node-input-dataType'> 
+            <option value='1'  >Charlie-ClusteredData</option>
+            <option value='2' selected=true>Tango-FormatData</option> 
+        </select>  -->
+         <!-- <button type="button" id="tango-btn" value='1' class="btn btn-primary" onclick="onDataFormatChng(1)"> Tango </button>
+        <button type="button" id="charlie-btn" value='2' class="btn btn-success" onclick="onDataFormatChng(2)> Charlie </button>  -->
+    </div>
+
+
+    <div class="form-row">
+        <label for="node-input-machCldDataId"><i class="fa fa-external-link"></i> Prefix string</label>
+        <input type="text" id="node-input-machCldDataId" placeholder="M001">
+    </div>
+
+    <div class="form-row" id="startAddDiv">
+        <label for="node-input-add"><i class="fa fa-external-link"></i> Start Address</label>
+        <input type="text" id="node-input-add" placeholder="001">
+    </div>
+
+
+   
+    
+    <!-- <div class="form-row">
+        <label for="node-input-storeForward"><i class="fa fa-empire"></i> <span>Store & Forward </span></label>
+         <div style="display:inline; position:relative; bottom:9px;">
+            <select id="node-input-fileSize" style="width:60px !important">
+            <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="40">40</option>
+                <option value="50">50</option>
+                <option value="60">60</option>
+                <option value="70">70</option>
+                <option value="80">80</option>
+                <option value="90">90</option>
+                <option value="100">100</option>
+
+            </select>  
+            <i class="fa fa-history"></i><span > Unit </span>
+            <select id="node-input-sizeUnit" style="width:100px !important">
+            <option value="MB" selected>MB</option>
+                <option value="KB">KB</option>
+
+            </select>
+        </div>
+    </div> -->
+
+    <div class="form-row">
+        <label for="node-input-logging"><i class="fa fa-random"></i> Logging</label>
+        <select type='text' id='node-input-logging'> 
+            <option value="1">Enable</option>
+            <option value="2">Disable</option>
+        </select>
+    </div>
+
+
+    <div class="form-row" id="loggingDivision">
+    
+        <div class="form-row">
+            <label for="node-input-loggingLevel"><i class="fa fa-random"></i> Level</label>
+            <select type='text' id='node-input-loggingLevel'> 
+                <option value="error">Alert only</option>
+                <option value="info">All events</option>
+            </select>
+        </div>
+
+    </div>
+
+
+</script>
+
+<script type="text/x-red" data-help-name="SE_Machine_Advisor">
+    <div class="tabset">
+        <input type="radio" name="tabset" id="h-tab1" aria-controls="se-node-license" checked>
+        <label for="h-tab1">LICENSE</label>
+        <input type="radio" name="tabset" id="h-tab2" aria-controls="se-node-help">
+        <label for="h-tab2">HELP</label>
+        <div class="tab-panels">
+            <section id="se-node-license" class="tab-panel">
+                <div style="padding: 10px 5px;text-align: justify;">
+                    <center><h2>INFORMATION</h2></center>
+                    <center>Open Source Software used in the SE Machine Advisor node</center>
+                    <br>
+                    <br> The SE Machine Advisor node contains, among other things, Open Source Software files, as specified below, developed by third parties and licensed under an Open Source Software license. These Open Source Software files are protected by copyright. Your right to use the Open Source Software is governed by the relevant applicable Open Source Software license conditions.
+                    <br>
+                    <br> Warranty regarding use of the Open Source Software:
+                    <br>
+                    <br> The following disclaimer applies to the GPL and LGPL components (if any) in relation to the rights holders: “this program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE”. See the GNU General Public License or the GNU Lesser General Public License for more details.
+                    <br>
+                    <br> For the remaining open source components, the liability exclusions of the rights holders apply as per the respective license.
+                    <br>
+                    <br> Schneider Electric SE and all of its subsidiaries (“Schneider Electric Group”) provide no warranty for the Open Source Software contained in the SE Machine Advisor node, if such Open Source Software is used in any manner other than intended by Schneider Electric Group. The licenses listed below define the warranty, if any, from the rights holders of the Open Source Software. Schneider Electric Group specifically disclaims any warranty for defects caused by altering any Open Source Software or the SE Machine Advisor node's configuration. Any warranty claims against Schneider Electric Group in the event that the Open Source Software contained in the SE Machine Advisor node infringes the intellectual property rights of a third party are excluded.
+                    <br> Technical support, if any, will only be provided for unmodified software.
+                    <br>
+                    <br> Further use of Open Source Software:
+                    <br>
+                    <br> Your compliance with those license conditions will entitle you to use the Open Source Software as foreseen in the relevant license. In the event of conflicts between other Schneider Electric license conditions applicable to the SE Machine Advisor node and the Open Source Software license conditions, the Open Source Software conditions shall prevail. The Open Source Software is provided royalty-free (i.e. no fees are charged for exercising the licensed rights). The following Open Source Software is contained in the SE Machine Advisor node:
+                    <br>
+                    <br>
+                    <table class="licenseTable">
+                        <tr>
+                            <th>Open Source Software file</th>
+                            <th>License</th>
+                            <th>Source Link</th>
+                        </tr>                       
+                        <tr>
+                            <td>debug</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/debug</td>
+                        </tr>
+                        <tr>
+                            <td>json-size</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/json-size</td>
+                        </tr>
+                        <tr>
+                            <td>mqtt</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/mqtt</td>
+                        </tr>
+                        <tr>
+                            <td>node-json-db</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/node-json-db</td>
+                        </tr>
+                        <tr>
+                            <td>request</td>
+                            <td>Apache-2.0</td>
+                            <td>https://www.npmjs.com/package/request</td>
+                        </tr>
+                        <tr>
+                            <td>Winston</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/winston</td>
+                        </tr>
+                        <tr>
+                            <td>pdfreader</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/pdfreader</td>
+                        </tr>
+                    </table>
+    
+                    <br>
+                    <br> The respective license terms for the respective Open Source Software files can be found at the end of this document.
+                    <br>
+                    <br> If any Open Source Software contained in the SE Machine Advisor node is licensed under GNU General Public License (GPL), GNU Lesser General Public License (LGPL), Mozilla Public License (MPL) or any other Open Source Software license, which requires that source code is to be made available, you can download the corresponding source code of the Open Source Software from the aforementioned link.
+                    <br>
+                    <br>
+                    <table class="licenseDetails">
+                        <tr>
+                            <th>The Licenses in detail</th>
+                        </tr>
+                        <tr>
+                            <td>
+                                <table>
+                                    <tr>
+                                        <th class="sub">ISC License</th>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <center>Copyright © 2020, Schneider-Electric</center>
+                                            <br>
+                                            <br> Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+                                            <br>
+                                            <br> THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+                                            <br>
+                                            <br>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <table>
+                                    <tr>
+                                        <th class="sub">MIT License</th>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <center>Copyright © 2020, Schneider-Electric</center>
+                                            <br>
+                                            <br> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+                                            <br>
+                                            <br> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+                                            <br>
+                                            <br> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+                                            <br>
+                                            <br>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+    
+                </div>
+            </section>
+            <section id="se-node-help" class="tab-panel">
+                <!-- TS 16104 -->
+                <h2> Please <a href="/machine_advisor/Machine_Advisor_Help_Manual" target="_blank">click here</a> to view the SE Machine Advisor User Manual. </h2>
+            </section>
+    </div>
+</div>
+</script>

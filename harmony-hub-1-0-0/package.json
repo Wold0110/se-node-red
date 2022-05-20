@@ -1,0 +1,34 @@
+{
+  "name": "se-node-red-harmony_hub",
+  "version": "1.0.0",
+  "description": "SE Harmony Hub node is a data collecting node using Modbus communication protocol (TCP or Serial). It retrieves sensors' data which are commissioned wirelessly to the gateway and displays it on a web page for remote monitoring",
+  "main": "none",
+  "node-red": {
+    "nodes": {
+      "SEHarmonyHub-Client": "nodes/SEHarmonyHub-Client.js",
+      "SE_HarmonyHub": "nodes/SE_HarmonyHub.js"
+    }
+  },
+  "license": "Schneider Electric",
+  "author": "Schneider Electric",
+  "dependencies": {
+    "async-limiter": "^1.0.0",
+    "atob": "^2.1.2",
+    "btoa": "^1.2.1",
+    "connect": "^3.6.6",
+    "debug": "2.6.8",
+    "express": "^4.16.4",
+    "fs-extra": "^6.0.1",
+    "install": "^0.13.0",
+    "modbus-serial": "7.4.2",
+    "pdfreader": "^1.0.6",
+    "socket.io-client": "^2.3.0",
+    "stampit": "2.1.2",
+    "stately.js": "1.3.0",
+    "underscore": "1.9.1",
+    "vuelidate": "^0.7.4",
+    "winston": "2.4.0",
+    "ws": "^7.0.0"
+  },
+  "devDependencies": {}
+}

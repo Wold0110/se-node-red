@@ -1,0 +1,599 @@
+<script type='text/javascript'>
+    const passcode = 'Ya5Z9ymBp612IdMrBPwE';
+    let ndId;
+    RED.nodes.registerType("SE_HarmonyHub",
+        {
+            //#3DCD58 SEGUIDELINE
+            // #32cd32 OLD
+            category: "modbus", color: "#3DCD58",
+            defaults: {
+                name: { value: "" },
+                version: { value: "1.0.0" },                
+                redirectWebApp: { value: !1 },
+                upload: {value: ""},
+                logging: { value: "1" },
+                loggingLevel: { value: "error" },
+                server: { type: "SEHarmonyHub-Client", required: !0 }
+            },
+            outputs: 1,
+            icon: "se_e-sologate.png",
+            paletteLabel: "SEHarmonyHub",
+            label: function () { return this.name || "SEHarmonyHub" },
+            oneditprepare: function () {
+                let node = this;
+                let webappUrl = $('#webapp_btn')
+                let download_btn = $("#download_btn");
+                let upload_btn = $("#fileSelect");
+                ndId = node.id;
+
+                if(!node.server)
+                {
+                    webappUrl.css('background-color','gray');
+                    webappUrl.attr('disabled',true);
+                    download_btn.css('background-color','gray');
+                    download_btn.attr('disabled',true);
+                    // BUgID 13473: disable upload functionality when device is not configured
+                    upload_btn.addClass('disabled');
+                }
+                else{
+                    $.getJSON('harmony/'+node.id, function (data)  
+                    {
+                        if(!data.port)
+                        {
+                            webappUrl.css('background-color','gray');
+                            webappUrl.attr('disabled',true);
+                            download_btn.css('background-color','gray');
+                            download_btn.attr('disabled',true);
+                            // BUgID 13473: disable upload functionality when device is not configured
+                            upload_btn.addClass('disabled');
+                        }                    
+                        else{
+                            webappUrl.click(function(){                                
+                                $.getJSON('harmony/'+node.id, function (data) {                                  
+                                    const param1 = {"id":node.id.toString(),"origin":window.location.href};                                     
+                                    const path = window.location.href.split(window.location.port)[0];
+                                    const tknStr = node.id +"$"+new Date().toISOString();
+                                    const tkn =  encryptCodes(tknStr);                                      
+                                    let nwWin;
+                                    const nwURL = "https:"+path.split(":")[1]+":"                                  
+                                    if(data.port){                                     
+                                        nwWin = window.open(nwURL+data.port+'/?param1='+tkn,'_blank');                                      
+                                    }
+                                    else{                                        
+                                        nwWin = window.open(path+'50000'+'/?param1='+tkn,'_blank');
+                                    }
+                                    setTimeout(function(){nwWin.postMessage(param1,"*")},1000);
+                                })
+                            });
+                            function download(filename, text) {
+                                // Bug 11260: Export file functionality
+                                var element = document.createElement('a');
+                                element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+                                element.setAttribute('download', filename);
+
+                                element.style.display = 'none';
+                                document.body.appendChild(element);
+
+                                element.click();
+
+                                document.body.removeChild(element);
+                            }
+
+                            // Start file download.
+                            
+                            download_btn.click(function(){
+                                $.getJSON('harmony/'+node.id+'/download', function(data){
+                                    let key = Object.keys(data)[0];
+                                    // using .txt file to restrict import and export of only HarmonyHub channelname files.
+                                    download(key.toString()+".txt",data[key]);
+                                });
+                            });
+
+                        }
+                    });
+                }
+                let loggingSelector = $('#node-input-logging')
+                let loggingDivision = $("#loggingDivision")
+                loggingSelector.change(function () {
+                    if (loggingSelector.val() === '1') {
+                        loggingDivision.show();
+                    }
+                    else {
+                        loggingDivision.hide();
+                    }
+                });
+                const encryptCodes = function(content) {
+                    var result = []; var passLen = passcode.length ;
+                    for(var i = 0  ; i < content.length ; i++) {
+                        var passOffset = i%passLen ;
+                        var calAscii = (content.charCodeAt(i)+passcode.charCodeAt(passOffset));
+                        result.push(calAscii);
+                    }
+                    return btoa((unescape(encodeURIComponent(result)))) ;
+                }
+                const fileSelect = document.getElementById("fileSelect"),
+                fileElem = document.getElementById("fileElem"),
+                fileList = document.getElementById("fileList");
+                fileSelect.addEventListener("click", function (e) {
+                if (fileElem) {
+                    fileElem.click();
+                }
+                e.preventDefault(); // prevent navigation to "#"
+                }, false);
+            }
+        })
+        function readFileData(event) {
+            var uploadedFile = event.target.files[0];
+            $("#node-input-upload").val(uploadedFile.name);
+            getChannelData(uploadedFile);
+        }            
+        function handleFiles(event) {
+            let files = event.target.files[0];
+            if (!files) {
+                fileList.innerHTML = "No file selected!";
+            } else {
+                fileList.innerHTML = files.name;
+            }
+            readFileData(event);
+        }
+function getChannelData(upldFle){
+    try{
+        if(upldFle)
+        {
+            var readFile = new FileReader();
+            readFile.onload = function (e) {
+                filecontent = e.target.result;
+                $.post('/harmony/'+ndId+'/upload',{data:filecontent} ,function(req,res){
+                    // Display message on restore fail or pass
+                    $("#upload-msg").css('display','block');
+                    $("#upload-msg").html(req.status);
+                    if(req.status === "Restore completed successfully!"){
+                        $("#upload-msg").css("color","green");
+                    }
+                    else{
+                        $("#upload-msg").css("color","red");
+                    }
+                } );
+            }
+            // loading the file to trigger load method.
+            readFile.readAsText(upldFle);
+        }
+    }
+    catch(e){
+        //SQ
+    }
+    
+}
+
+ function triggerFileInput() {
+     $('#fileselect').trigger('click');
+  }
+</script>
+<script type='text/x-red' data-template-name='SE_HarmonyHub'>
+    <div class="heading"> 
+        <label> Schneider Electric </label> 
+     </div>
+	
+	<!--Page Break-->
+	<br>    
+<div class='form-row'> 
+    <label for='node-input-name'> 
+    <i class='icon-tag'> </i>
+    <span data-i18n='node-red:common.label.name'> </span> 
+    </label> 
+    <input type='text' id='node-input-name' placeholder='Name' maxlength="32" onkeypress="return validateName(event)">
+</div>
+<div class="form-row">
+        <for="node-input-version">
+    </div> 
+   
+<div class='form-row'> 
+    <label for='node-input-server'>
+    <i class='icon-globe'></i> 
+    <span data-i18n='modbus-contrib.label.server'> </span> 
+    </label> 
+    <input type='text' id='node-input-server' >
+    <br />
+    
+    <textarea style="margin-left:122px; color:red; width:75%;" readonly>
+Note: Do not use the same Gateway ( server configuration ) for multiple nodes
+    </textarea>
+</div>
+
+
+<div class="form-row" style="margin-top:-16px;">
+        <label for="node-input-logging"><i class="fa fa-random"></i> Logging</label>
+        <select type='text' id='node-input-logging'>
+            <option value="1">Enable</option>
+            <option value="2">Disable</option>
+        </select>
+    </div>
+<div class="form-row" id="loggingDivision" >
+    
+        <label for="node-input-loggingLevel"><i class="fa fa-random"></i> Level</label>
+        <select type='text' id='node-input-loggingLevel'> 
+            <option value="error">Alerts Only</option>
+            <option value="info">All Events</option>
+        </select>
+    </div>
+    <hr>
+<div class='form-row'>
+    <label for='node-input-redirectWebApp'></label>
+     <a href="#" >
+        <input id="webapp_btn" type="button" style="background-color:#32ad3c !important; color:white !important; max-width:160px;" value="Harmony Hub Web" />
+     </a>
+</div>
+<hr>
+<!-- Display alert message for download to user -->
+
+<div class = 'form-row'>
+    <textarea style="min-height:70px;" readonly>
+Note: Use Upload/Download feature to retain channel names BEFORE -
+    1.Deleting the node which may result in loss of channel names
+    2.Operating the node in a new system with the same gateway
+    </textarea>
+</div>
+
+<div class = "form-row" style="text-align:left;">
+    <label><i class="fa fa-download"></i> Download <br> Sensor Names</label>
+    <a href = "#">
+        <input id="download_btn" type="button" style="background-color:#32ad3c !important; color:white !important;
+        max-width:160px; position:relative; bottom: 11px"
+       value="Download File" />
+    </a>
+</div>
+
+<div class="form-row" style="display:inline;">
+   
+    <div class="file" style="display:inline;">
+        <label><i class="fa fa-upload"></i> Upload <br> Sensor Names</label>
+        <div style="position:relative; bottom:40px; margin-left:128px;">
+            <input type="file" id="fileElem" accept=".txt" style="display:none" onchange="handleFiles(event)">
+            <a href="#" id="fileSelect" class="enabled">Browse ...</a>
+            <div id="fileList" style=" height:10px; margin-top:10px; width:80%; font-size:11px;">No file selected!</div>
+            <span class="file-custom" data-content="Browse file with channel names" onclick="triggerFileInput()"></span>
+        </div>
+        <input id="node-input-upload" style="width:1px; display:none;">
+    </div>
+    <!-- Display restore message -->
+        <textarea id="upload-msg" style="color:red; margin-left:123px; display:none; position:relative; bottom:15px; width:70%; font-size:14px !important" readonly>
+        </textarea>
+  
+</div>
+
+
+</script>
+<script type='text/x-red' data-help-name='SE_HarmonyHub'>
+    <div class="tabset">
+        <input type="radio" name="tabset" id="h-tab1" aria-controls="se-node-license" checked>
+        <label for="h-tab1">LICENSE</label>
+        <input type="radio" name="tabset" id="h-tab2" aria-controls="se-node-help">
+        <label for="h-tab2">HELP</label>
+    
+        <div class="tab-panels">
+            <section id="se-node-license" class="tab-panel">
+                <!-- Rectified CSS for License tab -->
+                <div style="text-align:justify;padding: 10px 5px;">
+                    <center><h2>INFORMATION</h2></center>
+                    <center>Open Source Software used in the SE Harmony Hub node</center>
+                    <br>
+                    <br> The SE Harmony Hub node contains, among other things, Open Source Software files, as specified below, developed by third parties and licensed under an Open Source Software license. These Open Source Software files are protected by copyright. Your right to use the Open Source Software is governed by the relevant applicable Open Source Software license conditions.
+                    <br>
+                    <br> Warranty regarding use of the Open Source Software:
+                    <br>
+                    <br> The following disclaimer applies to the GPL and LGPL components (if any) in relation to the rights holders: “this program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE”. See the GNU General Public License or the GNU Lesser General Public License for more details.
+                    <br>
+                    <br> For the remaining open source components, the liability exclusions of the rights holders apply as per the respective license.
+                    <br>
+                    <br> Schneider Electric SE and all of its subsidiaries (“Schneider Electric Group”) provide no warranty for the Open Source Software contained in the SE Harmony Hub node, if such Open Source Software is used in any manner other than intended by Schneider Electric Group. The licenses listed below define the warranty, if any, from the rights holders of the Open Source Software. Schneider Electric Group specifically disclaims any warranty for defects caused by altering any Open Source Software or the SE Harmony Hub node's configuration. Any warranty claims against Schneider Electric Group in the event that the Open Source Software contained in the SE Harmony Hub node infringes the intellectual property rights of a third party are excluded.
+                    <br> Technical support, if any, will only be provided for unmodified software.
+                    <br>
+                    <br> Further use of Open Source Software:
+                    <br>
+                    <br> Your compliance with those license conditions will entitle you to use the Open Source Software as foreseen in the relevant license. In the event of conflicts between other Schneider Electric license conditions applicable to the SE Harmony Hub node and the Open Source Software license conditions, the Open Source Software conditions shall prevail. The Open Source Software is provided royalty-free (i.e. no fees are charged for exercising the licensed rights). The following Open Source Software is contained in the SE Harmony Hub node:
+                    <br>
+                    <br>
+                    <table class="licenseTable">
+                        <tr>
+                            <th>Open Source Software file</th>
+                            <th>License</th>
+                            <th>Source Link</th>
+                        </tr>
+                        <tr>
+                            <td>modbus-serial</td>
+                            <td>ISC</td>
+                            <td>https://www.npmjs.com/package/modbus-serial</td>
+                        </tr>
+                        <tr>
+                            <td>Winston</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/winston</td>
+                        </tr>
+                        <tr>
+                            <td>stately.js</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/stately.js</td>
+                        </tr>
+                        <tr>
+                            <td>async-limiter</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/async-limiter</td>
+                        </tr>
+                        <tr>
+                            <td>debug</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/debug</td>
+                        </tr>
+                        <tr>
+                            <td>fs-extra</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/fs-extra</td>
+                        </tr>
+                        <tr>
+                            <td>connect</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/connect</td>
+                        </tr>
+                        <tr>
+                            <td>Stampit</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/stampit</td>
+                        </tr>
+                        <tr>
+                            <td>Express</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/express</td>
+                        </tr>
+                        <tr>
+                            <td>underscore</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/underscore</td>
+                        </tr>
+                        <tr>
+                            <td>ws</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/ws</td>
+                        </tr>
+                        <tr>
+                            <td>atob</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/atob</td>
+                        </tr>
+                        <tr>
+                            <td>btoa</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/btoa</td>
+                        </tr>
+                        <tr>
+                          <td>pdfreader</td>
+                          <td>MIT</td>
+                          <td>https://www.npmjs.com/package/pdfreader</td>
+                        </tr>
+                    </table>
+    
+                    <br>
+                    <br> The respective license terms for the respective Open Source Software files can be found at the end of this document.
+                    <br>
+                    <br> If any Open Source Software contained in the SE Harmony Hub node is licensed under GNU General Public License (GPL), GNU Lesser General Public License (LGPL), Mozilla Public License (MPL) or any other Open Source Software license, which requires that source code is to be made available, you can download the corresponding source code of the Open Source Software from the aforementioned link.
+                    <br>
+                    <br>
+                    <table class="licenseDetails">
+                        <tr>
+                            <th>The Licenses in detail</th>
+                        </tr>
+                        <tr>
+                            <td>
+                                <table>
+                                    <tr>
+                                        <th class="sub">ISC License</th>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <center>Copyright(c) 2020, Schneider-Electric</center>
+                                            <br>
+                                            <br> Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+                                            <br>
+                                            <br> THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+                                            <br>
+                                            <br>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <table>
+                                    <tr>
+                                        <th class="sub">MIT License</th>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <center>Copyright 2020 Schneider-Electric</center>
+                                            <br>
+                                            <br> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+                                            <br>
+                                            <br> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+                                            <br>
+                                            <br> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+                                            <br>
+                                            <br>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+    
+                </div>
+            </section>
+            <section id="se-node-help" class="tab-panel">
+              <!-- US 16117 -->
+              <h2>Please <a href="/harmonyhub/Harmony_Hub_Help_Manual"  target="_blank">click here </a> to view the SE Harmony Hub User Manual. </h2>
+    </section>
+        </div>
+    </div>
+    </script>
+<style>
+.licenseTable {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.licenseTable td, .licenseTable th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+.licenseTable tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+
+.licenseDetails {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.licenseDetails td, .licenseDetails th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+.licenseDetails th.sub {
+  background: #000;;
+  color: #fff;
+}
+/*
+ CSS for the help tabs
+*/
+.tabset > input[type="radio"] {
+  position: absolute;
+  left: -200vw;
+}
+
+.tabset .tab-panel {
+  display: none;
+}
+
+.tabset > input:first-child:checked ~ .tab-panels > .tab-panel:first-child,
+.tabset > input:nth-child(3):checked ~ .tab-panels > .tab-panel:nth-child(2),
+.tabset > input:nth-child(5):checked ~ .tab-panels > .tab-panel:nth-child(3),
+.tabset > input:nth-child(7):checked ~ .tab-panels > .tab-panel:nth-child(4),
+.tabset > input:nth-child(9):checked ~ .tab-panels > .tab-panel:nth-child(5),
+.tabset > input:nth-child(11):checked ~ .tab-panels > .tab-panel:nth-child(6) {
+  display: block;
+}
+
+.tabset > label {
+    position: relative;
+    display: inline-block;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    cursor: pointer;
+    font-weight: 600;
+    width: 45%;
+    text-align: center;
+    margin-bottom: 0px;
+}
+
+.tabset > label:hover,
+.tabset > input:checked + label,
+.tabset > input:focus + label {
+  color: #06c;
+}
+
+
+.tabset > input:checked + label {
+  border-color: #ccc;
+  border-bottom: 1px solid #fff;
+  margin-bottom: -1px;
+}
+
+.tab-panel {
+  padding: 2px 0;
+  border-top: 1px solid #ccc;
+}
+.form-row label{
+    width: 115px !important;
+}
+.form-row input{
+    width: 70%;
+}
+
+input[type="file"]{
+   -webkit-appearance: none;
+   text-align: left;
+   -webkit-rtl-ordering:  left;
+   border:none;
+}
+input[type="file"]::-webkit-file-upload-button{
+   -webkit-appearance: none;
+   margin: 7px 0 0 0px;
+   border: 1px solid #aaaaaa;
+   border-radius: 4px;
+   background-image: -webkit-gradient(linear, left bottom, left top, from(#d2d0d0), to(#f0f0f0));
+   background-image: -moz-linear-gradient(90deg, #d2d0d0 0%, #f0f0f0 100%);
+}
+
+</style>
+    <script>
+        function validateName(evt){
+            var charCode = (evt.which) ? evt.which : event.keyCode;
+            if ((charCode > 45 && charCode < 123) || (charCode == 189 || charCode == 190 || charCode == 32))
+                return true;
+            return false;
+        }
+    </script>
+    <style>
+        .heading{
+            background:#32963f !important;
+            height: 25px;
+            padding: 5px;
+        } 
+        .heading label{
+            color:white !important;
+            font-weight:bold !important;
+            text-align: center;
+            padding-top: 3px;
+        }
+        textarea{
+            font-family: "Nunito";
+            font-size: 12px !important;
+            min-height:40px; 
+            max-height:500px; 
+            width:100%; 
+            overflow:hidden;
+            resize:none;
+            background-color:white !important;
+            border: none;
+            outline: none;
+            -webkit-box-shadow: none;
+            box-shadow: none;
+            cursor: text !important;
+        }
+        input, select{
+            font-family: "Nunito" !important;
+        }
+        #fileSelect.enabled{
+            border: 1px solid#cdbdbd;
+            padding: 2px;
+            width: 76px;
+            display: inline-block;
+            background-color: #eaeae9;
+            color:black;
+            text-align: center;
+            height: 18px;
+            font-family: "Nunito";
+            text-decoration: none;
+        }
+        #fileSelect.disabled {
+            pointer-events: none;
+            background-color:gray;
+            color: white;
+            cursor: pointer !important;
+        }
+    </style>

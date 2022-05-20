@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>HarmonyHub</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="shortcut icon" type="image/png" href="icons/se_e-sologate.png"/>
+	<link rel="stylesheet" href="css/stylesheets/bootstrap.min.css">
+	<link rel="stylesheet" href="css/stylesheets/style.css">
+	<link rel="stylesheet" href="css/stylesheets/all.css">
+	<link rel="stylesheet" href="fonts/se-icon.css">
+	<link rel="stylesheet" href="css/se-iocn-font.css">
+  <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script> -->
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script> -->  
+	<script src="js/jquery.min.js"></script>
+	<script src="js/popper.min.js"></script>
+	 <script src="js/vuelidate.min.js"></script> 
+  <script src="js/validators.min.js"></script>	
+<script src="js/vue.min.js"></script>
+	<script src="js/hw-main.js"></script>
+	<script src="js/js4/bootstrap.min.js"></script>
+
+</head>
+
+<body style="overflow-y:hidden; min-width: 1300px;">
+	<!-- body {  min-width:600px; } -->
+<!-- <div id="container" style="min-width:1300px;border:1px solid rgb(196, 28, 211)"> -->
+
+<!-- <div v-show ="window.isInvalidLogin">
+	You are not an authorized user
+</div> -->
+<div id="harmonyhub-web" style="display: none">
+	<nav class="navbar navbar-expand-lg navbar-white bg-light navbar-fixed-top" id="header" >
+		<img src="icons/EcoStruxure-Logo.svg" alt=""></img>
+		<h6 class="HarmonyhubName">Harmony Hub</h6>
+		<div class="navbar-collapse app-nav">
+			<ul class="navbar-nav ml-auto">
+					<li class="nav-item"><span class="checked-icon1" style="height: 25px; width:25px;margin-top:3px"><img
+								:src="[deviceStatus === 'Connected'? 'icons/check.svg' : 'icons/err.svg']"  @error="icons/err.svg" alt="deviceStatus"></img></span></li>
+					<li class="nav-item">
+						<div class="device-status" style="line-height: 16px !important;">
+							<div class="status-label">Device Status</div>
+							<div class="status-info" id="status">
+								<strong>{{nodeName}}</strong><span v-bind:style="{ color: [deviceStatus === 'Connected'? '#3dcd58' : 'red'] }">{{deviceStatus}}</span></div>
+						</div>
+						<div class="firmware-ver">Firmware Version <span>{{firmwareVer}}</span></div>
+					</li>
+				</ul>
+				<ul class="navbar-nav" v-if="deviceStatus === 'Connected'">
+				<li class="nav-item">
+					 <div  class="">
+						
+						</i><span style="font-size: 12px;padding: 5px"> Data will be retrieved every {{pollrate}} seconds</span>
+						<span class="checked-icon1" style="height: 25px; width:25px;"
+							data-target="#myModal" data-toggle="modal">
+							<img id='Layer_2' style="width: 1rem; cursor: pointer;" title="Update Pollrate" alt="" src="icons/setting.svg" alt=""></img></span></div>
+
+							
+
+				</li>
+
+					
+					 
+					
+			</ul>
+		</div>
+		<img src="icons/schneiderLogo.svg" alt=""></img>
+	</nav>
+
+
+
+
+
+	<!-- Disable close of popup on outside click -->
+	<div class="modal fade" id="myModal" style="font-family: Nunito;" data-backdrop="static" data-keyboard="false">
+		<div class="modal-dialog">
+			<div class="modal-content">
+
+				<!-- Modal Header -->
+				<div class="modal-header"  id="settingsmodal1" >
+					<h4 class="modal-title" style="font-size: 14pt;line-height: 0.5;">Poll rate</h4>
+					<!-- to revert back the pollrate value to current in the dialog box if updation is cancelled-->
+					<button type="button btn primary" v-on:click="cancelUpdatePollRateVal" class="close" data-dismiss="modal">&times;</button>
+				</div>
+
+				<!-- Modal body -->
+				 <div class="modal-body">
+					<div class="modal-body" style="background:#fff">
+						<div style="height:50px">
+							<div class='row'>
+								<div >Poll rate (Seconds)</div>
+								<div class='modal_body_txt' id="eventHandling">
+									<input type="button" value="-" class="qtyminus" v-on:click="decrement" style="margin-left: 10px;"/>
+									<input value="" type="number" v-b-tooltip.hover title="" v-model="counter" min="5" step="1" max="86400" style="width: 62px;" v-on:input="$v.counter.$touch" v-bind:class="{error: $v.counter.$error, valid: $v.counter.$dirty && !$v.counter.$invalid}"  />
+									<input type="button" value="+" class="qtyminus"  v-on:click="Increment" />
+								</div>
+								<div>
+									<br><!-- pollrate message changes-->
+									<p style="font-size: 11px;">
+									* Poll rate should be between 5 seconds to 86400 seconds( i.e 24hrs )
+								</p>
+								</div>
+							</div>
+
+							<div>
+
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Modal footer -->
+				<div class="modal-footer">
+					<!-- to revert back the pollrate value to current in the dialog box if updation is cancelled -->
+					<button type="button" class="btn btn-primary"  data-dismiss="modal" v-on:click="cancelUpdatePollRateVal">Close</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal" id="pollUpdateBtn"
+					v-on:click="updatePollRateVal">Update</button>
+
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+
+	<div class="modal fade" id="DeleteModal" style="font-family: Nunito;">
+		<div class="modal-dialog">
+			<div class="modal-content">
+
+				<!-- Modal Header -->
+				<div class="modal-header"  id="settingsmodal">
+					<h4 class="modal-title" style="font-size: 14pt;line-height: 0.5;"></h4>
+					<button type="button btn primary"class="close" data-dismiss="modal">&times;</button>
+				</div>
+
+				<!-- Modal body -->
+				<div class="modal-body" >
+					<div class="modal-body" style="background:#fff">
+						<div style="height:50px">
+							<div class='row'>
+								<div >Are you sure you want to delete the sensor ?</div>
+								<div class='modal_body_txt' id="eventHandling1">
+
+								</div>
+							</div>
+
+							<div>
+
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Modal footer -->
+				<div class="modal-footer" >
+					<button type="button"  class="btn btn-primary " data-dismiss="modal" @click="del(sensorIndexToDelete)">Yes</button>
+					<button type="button" class="btn btn-danger" data-dismiss="modal"
+						>No</button>
+
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+
+
+	<div class="modal fade" id="myModal1" style="font-family: Nunito;">
+		<div class="modal-dialog" style="padding-left: 175px; margin-top:115px;">
+			<div class="modal-content" style="width: 122px; margin-left: 14px;">
+
+
+				<!-- Modal body -->
+				<div class="RefreshBody" id="myModal1">
+					<div class="modal-body" style="background:#fff; height: 35vh !important;width: 15vw !important;">
+						<div class="spinner-border text-success" style="margin-left: 88px;margin-top: 22px;" role="status">
+							<span class="sr-only">Loading...</span>
+
+						  </div>
+						  <p style="font-size:8px; text-align: center">Sensor pairing in process</p>
+							<p style="font-size:8px; text-align: center">Please Wait...</p>
+					</div>
+
+				</div>
+
+
+
+			</div>
+		</div>
+	</div>
+
+
+	<multipairmodal id="myModalPOLL" data-backdrop="static" data-keyboard="false" v-bind:type="curprSensType"  v-bind:curmsg="curDispMsg">
+	</multipairmodal>
+
+
+
+
+
+
+
+
+
+	<div class="headerTabs" id="prsensorsbody">
+		<ul class="nav nav-tabs" id="myTab" role="tablist">
+			<li class="nav-item">
+				<a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home"
+					aria-selected="true">Pair Sensors</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" id="profile-tab" data-toggle="tab" href="#profile" role="tab" @click="sendSensorDiagReq();"
+					aria-controls="profile" aria-selected="false">Diagnosis</a>
+			</li>
+		</ul>
+		<div class="tab-content" id="myTabContent">
+			<div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
+				<div class="col-sm-12">
+					<div class="d-flex" style="font-family:Nunito; margin-top:-14px; height: 64px;">
+						<ul class="nav">
+							<li class="nav-item">
+								<div class="nav-link active">Sensors</div>
+							</li>
+							<li class="nav-item">
+								<div class="nav-link">{{pairCount}}/60 {{sensorTitle}} Paired</div>
+								 <!-- <input style="width:90px" v-on:blur="onPollLostFocus($event)"  v-model="pollrate" placeholder="Name">  -->
+							</li>
+						</ul>
+						<ul class="nav ml-auto">
+							<li class="nav-item">
+								<!-- <div class="nav-link" id="undoRedo">
+									<button type="button" class="btn btn-light se-icon-action_undo" style="background-color:#ededed;"> </button>
+									<button type="button" class="btn btn-light se-icon-action_redo" style="background-color:#ededed;"></button>
+								</div> -->
+							</li>
+							<li class="nav-item" style="margin-right:-22px !important;">
+								<div class="nav-link">
+									<button type="button" class="btn btn-light btn-bg" id="AddSensor"
+										v-on:click="addSensors">Add Sensor</button>
+								</div>
+							</li>
+							<li class="nav-item">
+								<div class="nav-link">
+									<button type="button" class="btn btn-primary" id="PairSensor"
+									data-target="#myModal12" v-on:click="pairSensor" :disabled="isPrSensrDisabled" data-toggle="modal" >Pair
+									Sensors</button>
+								</div>
+							</li>
+						</ul>
+					</div>
+
+
+
+					<div class="container-fluid" id="bodypanel"
+						style="height: 75vh; background-color: white; overflow-y: hidden; overflow-x:hidden; padding-right: 0px; padding-left: 0px;">
+						<div class="responsive-table">
+							<div class="table table-borderless"
+								style="border-bottom: 2px solid #3dcd58; height:42px; font-family: Nunito">
+								<div class="sm-12 " id="daignosis_Tab" style="overflow:hidden">
+									<div class="row">
+										<div class="col-sm-4">
+											<div class="row">
+												<div class="col-sm-2">	
+													<a></a>
+												</div>
+												<div class="col-sm-2">
+													<div class="row">
+															<span class="se-icon-star_plain " id="star"
+															style="font-size: 7px;color:red;">
+														</span>
+														<a v-on:click="sortBy('channel')">Channel 
+														<span :class="[order.channel==-1 ? 'se-icon-arrow3_up' : 'se-icon-arrow3_down']"></span>
+													</a>
+													</div>
+													
+												</div>
+												<div class="col-sm-2">
+													<div class="row">
+															<span class="se-icon-star_plain" id="star"
+															style="font-size: 7px;color:red; ">
+														</span>
+															<a v-on:click="sortBy('cname1')">Name 
+														<span :class="[order.cname1==-1 ? 'se-icon-arrow3_up' : 'se-icon-arrow3_down']"></span>
+													</a>
+													</div>
+													
+												</div>
+												<div class="col-sm-2">
+													<div class="row">
+															<span class="se-icon-star_plain" id="star"
+															style="font-size: 7px;color:red; ">
+														</span>
+														
+															<a v-on:click="sortBy('selected')">Type 
+													<!---->	<span :class="[order.selected==-1 ? 'se-icon-arrow3_up' : 'se-icon-arrow3_down']"></span> 
+														<!--	<span :class="[order.selected==-1 ? 'se-icon-arrow3_down'  : 'se-icon-arrow3_up']"></span> -->
+													</a>
+													</div>
+													
+												</div>
+												<div class="col-sm-4">
+													<div class="row">
+															<span class="se-icon-star_plain" id="star"
+															style="font-size: 7px;color:red; ">
+
+														</span>
+															<a>MAC Address
+														
+													</a>
+													</div>
+													
+												</div>
+											</div>
+
+										</div>
+										<div class="col-sm-5">
+											<div class="row">
+												<div class="col-sm-12">
+													<a>Parameters</a>
+												</div>
+
+											</div>
+										</div>
+										<div class="col-sm-3">
+											<div class="row">
+												<div class="col-sm-5">
+													<a>Status In Gateway</a>
+												</div>
+												<div class="col-sm-4">
+													<a>Pairing Status</a>
+												</div>
+												<div class="col-sm-3">
+													<a>Delete</a>
+												</div>
+
+											</div>
+										</div>
+
+
+									</div>
+
+								</div>
+							</div>
+
+
+						</div>
+						<div  style="height:68vh;overflow-y:scroll;overflow-x: hidden">
+						<div class="row"  id="daignosis_Tab" >
+							<pairsensors v-for="(item,index) in prsensor_arr"
+										 v-bind:item="item" v-bind:index="index"
+										 v-bind:itm="item" v-bind:key="index" 
+										 v-bind:values_arr = "item.values_arr" v-on:declared="onDeclared(index)"
+										 v-on:removeElement="removeSensor(index)">
+							</pairsensors>
+						</div>
+							<div class="container-fluid" style="height: 455px; background-color: white; margin-top:-15px;" v-if="prsensor_arr.length == 0">
+								<div class="sensorIcon">
+									<span class="se-icon-sensors" id="sensorIcons"></span></br>
+									  <div class=""  style="width:120px;font-size: 14px;color:#BABABA;padding-left:10px;">Click <a style="color: #007ec1;text-decoration: underline;cursor: pointer;" id="AddSensor"
+										v-on:click="addSensors">here</a> <br><span style="margin-left:-4px;">to add sensor</span> </div>
+								</div>
+
+								  </div>
+						</div>
+
+					</div>
+
+
+
+
+
+
+				</div>
+			</div>
+			<div class="tab-pane fade" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+				<div class="col-sm-12">
+					<div class="d-flex">
+						<ul class="nav">
+							<li class="nav-item">
+								<div class="nav-link  DiagnosisHeading active ">Sensors</div>
+							</li>
+							<li class="nav-item">
+								<div class="nav-link DiagnosisHeading">{{pairCount}}/60 {{sensorTitle}} Paired </div>
+							</li>
+						</ul>
+					</div>
+
+					<div class="bodypanel1" style="overflow-x:hidden;">
+						<div class="col-sm-12 " id="daignosis_Tab1">
+							<div class="row">
+								<div class="col-sm-4">
+									<div class="row">
+										<div class="col-sm-2">
+										</div>
+										<div class="col-sm-2">
+											<a>Type</a>
+										</div>
+										<div class="col-sm-8">
+											<a>Name</a>
+										</div>
+
+									</div>
+								</div>
+								<div class="col-sm-5">
+									<div class="row">
+										<div class="col-sm-5">
+											<a>Last Acquisition</a>
+										</div>
+										<div class="col-sm-2">
+											<a>Battery</a>
+										</div>
+										<div class="col-sm-2">
+											<a>LQI</a>
+										</div>
+										<div class="col-sm-2">
+											<a>RSSI</a>
+										</div>
+										
+									</div>
+								</div>
+								<div class="col-sm-3">
+									<div class="row">
+										<div class="col-sm-6" style="text-align:center">
+											<a>Status In Gateway</a>
+										</div>
+										<div class="col-sm-6" style="text-align:center">
+											<a>Pairing Status</a>
+										</div>
+									</div>
+								</div>
+								
+							</div>
+
+
+						</div>
+
+						<div class="row" id="daignosis_Tab">
+							<!-- <diagnosiscomponent v-for="(item,index) in prsensor_arr"
+										 v-bind:item="item" v-bind:index="index"
+										 v-bind:itm="item" v-bind:key="index"
+										 v-bind:values_arr = "item.values_arr"
+										 v-bind:sensorDiag = "item.sensorDiag"
+										 v-on:removeElement="removeSensor(index)" v-if="item.pairingstatus !== 'Unpaired' && item.mandFilledCnt > 4">
+							</diagnosiscomponent> -->
+
+							<diagnosiscomponent v-for="(item,index) in diagnosis_arr"
+										 v-bind:item="item" v-bind:index="index"
+										 v-bind:itm="item" v-bind:key="index"
+										>
+							</diagnosiscomponent>
+
+							<!-- <div class="container-fluid" style="height: 455px; background-color: white; margin-top:-15px;" v-if="prsensor_arr.length == 0">
+								<div class="sensorIcon">
+									<span class="se-icon-sensors" id="sensorIcons"></span></br>
+									  <div class=""  style="width:100px;font-size: 14px;">Click <a style="color: blue;" id="AddSensor"
+										v-on:click="addSensors">here</a> to add Sensors </div>
+								</div>
+
+								  </div> -->
+						</div>
+					</div>
+
+				</div>
+
+
+			</div>
+		</div>
+	</div>
+
+</div>
+</div>
+
+
+<!-- <div class="spinner-border text-success" role="status">
+  <span class="sr-only">Loading...</span>
+</div> -->
+
+
+
+
+
+</div>
+
+<div class="container-fluid" id="footerEle" style="display: none">
+	<div class="col-sm-12">
+		<div class="" style="text-align: right;">
+				 <p style="text-align: right; font-size: 9px;"> <span class="se-icon-star_plain" id="star"
+					style="font-size:6px;color:red; top:-2px; padding-left: 44px; text-align: right;">
+				</span>Required Field
+				<span style="font-size:10px;color:red;float: left;">In case you have one or more SPS type of sensor already paired, you will not be able to monitor the parameters in the Harmony Hub Webpage</span> 
+			</p>
+				<!-- <a><span class="se-icon-star_plain" id="star"
+					style="font-size:4px;color:red; top:-24px; padding-left: 44px; text-align: right;">
+				</span><p style="text-align: right; font-size: 8px;">*Required Field</p></a> -->
+		</div>
+	</div>
+
+</div>
+<!-- </div> -->
+</body>
+
+</html>
+
+
+<script src="js/harmonyhub-web.js"></script>

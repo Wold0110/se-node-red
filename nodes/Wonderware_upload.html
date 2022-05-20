@@ -1,0 +1,30 @@
+<script type="text/javascript">
+  RED.nodes.registerType('Wonderware_upload',{
+    category: 'function',
+    color: '#2ecc71',
+    defaults:{
+      name: {value: ""},
+      token: {value: "", required: true}
+    },
+    inputs: 1,
+    outputs: 1,
+    icon: "db.png",
+    paletteLabel:"Wonderware_upload",
+    label: function(){
+      return this.name || "wonderware";
+    }
+  });
+</script>
+<script type="text/x-red" data-template-name="Wonderware_upload">
+  <div class="form-row">
+    <label for="node-input-name"><i class="icon-tag"></i>Name</label>
+    <input type="text" id="node-input-name" placeholder="Node name">
+  </div>
+  <div class="form-row node-input-token">
+    <label for="node-input-token"><i class="icon-tag"></i>Token</label>
+    <input type="text" id="node-input-token" placeholder="Token from Wonderware">
+  </div>
+</script>
+<script type="text/x-red" data-help-name="Wonderware_upload">
+  <p> Send data to Wonderware using your Token </p>
+</script>

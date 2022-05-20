@@ -1,0 +1,650 @@
+<!--Register Node Type-->
+<script type="text/javascript">
+  RED.nodes.registerType('SE_Modbus-Client', {
+    category: 'config',
+    defaults: {
+      name: { value: "modbus", required: true, validate: RED.validators.regex(/^[a-zA-Z0-9]+$/) },
+      clienttype: { value: "tcp", required: true },
+      unitid: {
+        value: "1", validate: function (val) {
+          if (RED.validators.number() && (val >= 1 && val <= 255) && (val % 1) === 0) {
+            return true;
+          } else {
+            alert("SEModbusRead: Incorrect value for Unit ID Field");
+            return false;
+          }
+        }
+      },
+      bufferCommands: { value: "1" },
+      tcpHost: {
+        value: "127.0.0.1", required: true, validate: function (val) {
+          if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(val)) {
+            return (true)
+          }
+          alert("SE Modbus Slave Configuration: Incorrect value for IP Field")
+          return (false)
+        }
+      },
+
+      tcpPort: {
+        value: 502, required: true, validate: function (val) {
+          if (RED.validators.number() && (val >= 0 && val <= 65535) && (val % 1) === 0) {
+            return true;
+          } else {
+            alert("SE Modbus Slave Configuration: Incorrect value for Port Field")
+            return false;
+          }
+        }
+      },
+      tcpType: { value: "DEFAULT", required: true },
+
+      serialPort: { value: "/dev/ttyUSB", required: true },
+      serialType: { value: "RTUBuffered", required: true },
+      serialBaudrate: { value: 19200, required: true, validate: RED.validators.number() },
+      serialDatabits: { value: 8, required: true, validate: RED.validators.number() },
+      serialStopbits: { value: 1, required: true, validate: RED.validators.number() },
+      serialParity: { value: "none", required: true },
+      serialConnectionDelay: {
+        value: 100, validate: function (val) {
+          if (RED.validators.number() && (val >= 0 && val <= 65535) && (val % 1) === 0) {
+            return true;
+          } else {
+            alert("SE Modbus Slave Configuration: Incorrect value for Connection delay Field")
+            return false;
+          }
+        }
+      },
+
+      commandDelay: {
+        value: 100, validate: function (val) {
+          if (RED.validators.number() && (val >= 0 && val <= 65535) && (val % 1) === 0) {
+            return true;
+          }
+          else {
+            alert("SE Modbus Slave Configuration: Incorrect value for Queue Delay Field")
+            return false;
+          }
+        }
+      },
+      clientTimeout: {
+        value: 10000, validate: function (val) {
+          if (RED.validators.number() && (val >= 20 && val <= 65535) && (val % 1) === 0) {
+            return true;
+          }
+          else {
+            alert("SE Modbus Slave Configuration: Incorrect value for Timeout Field")
+            return false;
+          }
+        }
+      },
+      reconnectTimeout: {
+        value: 2000, validate: function (val) {
+          if (RED.validators.number() && (val >= 0 && val <= 65535) && (val % 1) === 0) {
+            return true;
+          }
+          else {
+            alert("SE Modbus Slave Configuration: Incorrect value for Reconnect Timeout Field")
+            return false;
+          }
+        }
+      },
+    },
+    label: function () {
+      let node = this
+      if (node.clienttype == "tcp") {
+        return node.name + "@" + node.tcpHost + ':Port:' + node.tcpPort
+      } else {
+        return node.name + "@" + node.serialPort + ':Baud Rate:' + node.serialBaudrate + ':Client ID:' + node.id
+      }
+    },
+    oneditprepare: function () {
+
+      let previous = null
+      let node = this
+      node.ports = []
+      let clientTypeSelector = $('#node-config-input-clienttype')
+      let inputsSerial = $("#node-inputs-modbus-serial")
+      let inputsSerialExtras = $("#node-inputs-modbus-serial-extras")
+      let inputsTCP = $("#node-inputs-modbus-tcp")
+      let queueButton = $("#node-config-input-bufferCommands")
+      let queueProxy = $("#node-inputs-queue-proxy")
+
+      queueButton.change(function () {
+        if (queueButton.val() == '1') {
+          queueProxy.show();
+        }
+        else {
+          queueProxy.hide();
+        }
+      })
+
+
+      clientTypeSelector.on('focus', function () {
+        previous = this.value
+      }).change(function () {
+
+        if (previous == null) {
+          previous = $("#node-config-input-clienttype").val()
+        }
+
+        if (node.commandDelay) {
+          node.commandDelay = parseInt(node.commandDelay)
+        }
+
+        if (node.clientTimeout) {
+          node.clientTimeout = parseInt(node.clientTimeout)
+        }
+
+        if (node.reconnectTimeout) {
+          node.reconnectTimeout = parseInt(node.reconnectTimeout)
+        }
+
+        switch (clientTypeSelector.val()) {
+          case 'tcp':
+            inputsSerialExtras.hide()
+            inputsSerial.hide()
+            inputsTCP.show()
+
+            if (node.tcpHost) {
+              node.tcpHost.required = true
+              node.tcpPort.required = true
+              if (node.tcpType) {
+                node.tcpType.required = true
+              }
+            }
+
+            if (node.serialPort) {
+              node.serialPort.required = false
+              if (node.serialType) {
+                node.serialType.required = false
+              }
+              node.serialBaudrate.required = false
+            }
+
+            if (node.serialDatabits) {
+              node.serialDatabits.required = false
+              node.serialStopbits.required = false
+              node.serialParity.required = false
+            }
+            break
+          case 'serial':
+          case 'simpleser':
+            if (clientTypeSelector.val() === 'simpleser') {
+              inputsSerialExtras.hide()
+              node.serialDatabits.value = 8
+              node.serialStopbits.value = 1
+              node.serialParity.value = 'none'
+            } else {
+              inputsSerialExtras.show()
+            }
+
+            inputsSerial.show()
+            inputsTCP.hide()
+
+            if (node.tcpHost) {
+              node.tcpHost.required = false
+              node.tcpPort.required = false
+              if (node.tcpType) {
+                node.tcpType.required = false
+              }
+            }
+
+            if (node.serialPort) {
+              node.serialPort.required = true
+              if (node.serialType) {
+                node.serialType.required = true
+              }
+              node.serialBaudrate.required = true
+            }
+
+            if (node.serialDatabits) {
+              node.serialDatabits.required = true
+              node.serialStopbits.required = true
+              node.serialParity.required = true
+            }
+            break
+          default:
+            break
+        }
+      })
+
+      try {
+        $("#node-config-input-serialPort").autocomplete("destroy")
+      }
+      catch (err) {
+      }
+
+
+      $("#node-config-lookup-serial").click(function () {
+        $("#node-config-lookup-serial").addClass('disabled')
+
+        $.getJSON('serialports', function (data) {
+          if (data.success) {
+            $("#node-config-lookup-serial").removeClass('disabled')
+            node.ports = []
+
+            $.each(data.ports, function (i, port) {
+              node.ports.push(port.comName)
+            })
+
+            $("#node-config-input-serialPort").autocomplete({
+              source: node.ports,
+              minLength: 0,
+              close: function (event, ui) {
+                $("#node-config-input-serialPort").autocomplete("destroy")
+              }
+            }).autocomplete("search", "")
+          }
+        })
+      })
+
+      // $("#node-config-input-serialPort").change(function () {
+      //   $.getJSON('portInuse', function (data) {
+      //     $.each(data, function (i, port) {
+      //       if($("#node-config-input-serialPort").val() == port.comport && node.id != port.nodeID){
+      //         alert("Client Configuration Error: Same COM Port is already added in client")  
+      //         $("#node-config-input-serialPort").val("")
+      //          return false;
+      //       }
+      //     })
+      //   })
+      // })
+    }
+  })
+
+</script>
+<script type='text/x-red' data-template-name='SE_Modbus-Client'>
+  <div class='form-row'>
+    <label for='node-config-input-name'><i class='icon-tag'></i> Name</label>
+    <input type='text' id='node-config-input-name' placeholder='Name' maxlength="32" onkeypress="return validateMBTName(event)" onpaste="validateCopiedText(event, 'AlphaNumeric')"> 
+ </div>
+ <div class='form-row'>
+    <label for='node-config-input-clienttype'><i class='icon-bookmark'></i> Type</label> 
+    <select type='text' id='node-config-input-clienttype' style='width:140px'>
+       <option value='tcp' selected>TCP</option>
+       <option value='serial'>Serial</option>
+    </select>
+ </div>
+ <div class='form-row'>
+   <label for='node-config-input-unitid'><i class='icon-bookmark'></i> Unit ID </label>
+   <input type='text' id='node-config-input-unitid' data-min="1" data-max="255" class="range" onselect="selectText(event)" onkeypress="return validateNumber(event)" onpaste="validateCopiedText(event, 'Numeric')" style='max-width:80px'> 
+ </div>
+ <hr>
+ <div id='node-inputs-modbus-tcp'>
+    <div class='form-row'> 
+       <label for='node-config-input-tcpHost'><i class='icon-bookmark'></i>Host 
+       </label> <input type='text' id='node-config-input-tcpHost'> 
+    </div>
+    <div class='form-row'> <label 
+       for='node-config-input-tcpPort'><i class='icon-bookmark'></i> Port
+       </label> <input type='text' id='node-config-input-tcpPort' data-min="0" data-max="65353" class="range" onselect="selectText(event)" onkeypress="return validateNumber(event)" onpaste="validateCopiedText(event, 'Numeric')"> 
+    </div>
+    <div class='form-row'>
+       <label 
+          for='node-config-input-tcpType'><i class='icon-bookmark'></i> TCP Type</label> 
+       <select type='text' 
+          id='node-config-input-tcpType' style='width:140px'>
+          <option value='DEFAULT' selected>DEFAULT</option>
+          <!-- <option value='TELNET'>TELNET</option>
+             <option value='C701'>C701</option> -->
+          <option value='TPC-RTU-BUFFERED'>RTUBuffered</option>
+       </select>
+    </div>
+ </div>
+ <div id='node-inputs-modbus-serial'>
+    <div class='form-row'> <label 
+       for='node-config-input-serialPort'><i class='fa fa-random'></i> Serial Port
+       </span></label> <input type='text' id='node-config-input-serialPort' style='width:60%' 
+          placeholder='/dev/ttyUSB or COM4'> <a id='node-config-lookup-serial' class='btn'><i 
+          id='node-config-lookup-serial-icon' class='fa fa-search'></i></a> 
+    </div>
+    <div class='form-row'>
+       <label 
+          for='node-config-input-serialType'><i class='icon-bookmark'></i> Serial Type
+       </label> 
+       <select type='text' id='node-config-input-serialType' style='width:140px'>
+          <option value='RTUBuffered' selected>RTUBuffered</option>
+          <!-- <option value='RTU'>RTU</option>
+          <option value='ASCII'>ASCII</option> -->
+       </select>
+    </div>
+    <div class='form-row'>
+       <label for='node-config-input-serialBaudrate'><i class='icon-bookmark'></i> Baud rate </label> 
+       <select id='node-config-input-serialBaudrate' style='max-width:140px'>
+          <option value='115200'>115200</option>
+          <option value='57600'>57600</option>
+          <option value='38400'>38400</option>
+          <option value='19200'>19200</option>
+          <option value='9600'>9600</option>
+          <option value='4800'>4800</option>
+          <option value='2400'>2400</option>
+          <option value='1200'>1200</option>
+          <option value='300'>300</option>
+          <option value='110'>110</option>
+          <option value='75'>75</option>
+       </select>
+    </div>
+ </div>
+ <div 
+    id='node-inputs-modbus-serial-extras'>
+    <div class='form-row'>
+       <label for='node-config-input-serialDatabits'><i class='icon-bookmark'></i> Data Bits</label> 
+       <select id='node-config-input-serialDatabits' style='max-width:80px'>
+          <option value='8'>8</option>
+          <option value='7'>7</option>
+          <option value='6'>6</option>
+          <option value='5'>5</option>
+       </select>
+    </div>
+    <div class='form-row'>
+       <label for='node-config-input-serialStopbits'><i class='icon-bookmark'></i> Stop Bits </label> 
+       <select id='node-config-input-serialStopbits' style='max-width:80px'>
+          <option value='1'>1</option>
+          <option value='1.5'>1.5</option>
+          <option value='2'>2</option>
+       </select>
+    </div>
+    <div class='form-row'>
+       <label for='node-config-input-serialParity'><i class='icon-bookmark'></i> Parity </label> 
+       <select id='node-config-input-serialParity' style='max-width:80px'>
+          <option value='none'>None</option>
+          <option value='even'>Even</option>
+          <option value='odd'>Odd</option>
+          <option value='mark'>Mark</option>
+          <option value='space'>Space</option>
+       </select>
+    </div>
+    <div class='form-row'> <label 
+       for='node-config-input-serialConnectionDelay'> <i class='fa fa-random'></i> Connection delay (ms) </label>
+       <input type='text' id='node-config-input-serialConnectionDelay' style='max-width:80px' placeholder='500' data-min="0" data-max="65535" class="range" onselect="selectText(event)" onkeypress="return validateNumber(event)" onpaste="validateCopiedText(event, 'Numeric')">
+    </div>
+ </div>
+ <hr>
+ <div class='form-row'>
+   <label for='node-config-input-clientTimeout'><i class='icon-time'></i>Timeout (ms)</label>
+   <input type='text' id='node-config-input-clientTimeout' placeholder='10000' data-min="0" data-max="600000" class="range" onselect="selectText(event)" onkeypress="return validateNumber(event)" onpaste="validateCopiedText(event, 'Numeric')" style='max-width:80px'>
+  </div>
+ <div class='form-row'>
+   <label for='node-config-input-reconnectTimeout'> <i class='icon-time'></i> Reconnect timeout (ms) </label>
+   <input type='text' id='node-config-input-reconnectTimeout' placeholder='2000' data-min="0" data-max="600000" class="range" onselect="selectText(event)" onkeypress="return validateNumber(event)" onpaste="validateCopiedText(event, 'Numeric')" style='max-width:80px'>
+  </div>
+ <hr>
+ <div class="form-row">
+    <label for="node-config-input-bufferCommands"><i class="fa fa-random"></i> Queue commands</label>
+    <select type='text' id='node-config-input-bufferCommands'>
+       <option value="1">Enable</option>
+       <option value="2">Disable</option>
+    </select>
+ </div>
+ <div id='node-inputs-queue-proxy'>
+    <div class='form-row'>
+      <label for='node-config-input-commandDelay'><i class='icon-time'></i> Queue delay (ms)</label> 
+      <input type='text' id='node-config-input-commandDelay' placeholder=1 data-min="1" data-max="600000" class="range" onselect="selectText(event)" onkeypress="return validateNumber(event)" onpaste="validateCopiedText(event, 'Numeric')" style='max-width:100px'> 
+    </div>
+ </div>
+</script>
+<script type='text/x-red' data-help-name='SE_Modbus-Client'>
+  <div class="tabset">
+      <input type="radio" name="tabset" id="h-tab1" aria-controls="se-node-license" checked>
+      <label for="h-tab1">License</label>
+      <input type="radio" name="tabset" id="h-tab2" aria-controls="se-node-help">
+      <label for="h-tab2">HELP</label>
+  
+      <div class="tab-panels">
+          <section id="se-node-license" class="tab-panel">
+              <div style="height: 49vh;overflow: auto;padding: 10px 5px;text-align: justify;">
+                  <center><h2>INFORMATION</h2></center>
+                  <center>Open Source Software used in the Modbus Client node</center>
+                  <br>
+                  <br> The Modbus Client node contains, among other things, Open Source Software files, as specified below, developed by third parties and licensed under an Open Source Software license. These Open Source Software files are protected by copyright. Your right to use the Open Source Software is governed by the relevant applicable Open Source Software license conditions.
+                  <br>
+                  <br> Warranty regarding use of the Open Source Software:
+                  <br>
+                  <br> The following disclaimer applies to the GPL and LGPL components (if any) in relation to the rights holders: “this program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE”. See the GNU General Public License or the GNU Lesser General Public License for more details.
+                  <br>
+                  <br> For the remaining open source components, the liability exclusions of the rights holders apply as per the respective license.
+                  <br>
+                  <br> Schneider Electric SE and all of its subsidiaries (“Schneider Electric Group”) provide no warranty for the Open Source Software contained in the Modbus Client node, if such Open Source Software is used in any manner other than intended by Schneider Electric Group. The licenses listed below define the warranty, if any, from the rights holders of the Open Source Software. Schneider Electric Group specifically disclaims any warranty for defects caused by altering any Open Source Software or the Modbus Client node's configuration. Any warranty claims against Schneider Electric Group in the event that the Open Source Software contained in the Modbus Client node infringes the intellectual property rights of a third party are excluded.
+                  <br> Technical support, if any, will only be provided for unmodified software.
+                  <br>
+                  <br> Further use of Open Source Software:
+                  <br>
+                  <br> Your compliance with those license conditions will entitle you to use the Open Source Software as foreseen in the relevant license. In the event of conflicts between other Schneider Electric license conditions applicable to the Modbus Client node and the Open Source Software license conditions, the Open Source Software conditions shall prevail. The Open Source Software is provided royalty-free (i.e. no fees are charged for exercising the licensed rights). The following Open Source Software is contained in the Modbus Client node:
+                  <br>
+                  <br>
+                  <table class="licenseTable">
+                      <tr>
+                          <th>Open Source Software file</th>
+                          <th>License</th>
+                          <th>Source Link</th>
+                      </tr>
+                      <tr>
+                          <td>node-json-db </td>
+                          <td>MIT</td>
+                          <td>https://www.npmjs.com/package/node-json-db</td>
+                      </tr>
+                      <tr>
+                          <td>request</td>
+                          <td>Apache-2.0</td>
+                          <td>https://www.npmjs.com/package/request</td>
+                      </tr>
+                      <tr>
+                          <td>Winston</td>
+                          <td>MIT</td>
+                          <td>https://www.npmjs.com/package/winston</td>
+                      </tr>
+                      <tr>
+                          <td>json-size</td>
+                          <td>MIT</td>
+                          <td>https://www.npmjs.com/package/json-size</td>
+                      </tr>
+                      <tr>
+                          <td>jsonfile</td>
+                          <td>MIT</td>
+                          <td>https://www.npmjs.com/package/jsonfile</td>
+                      </tr>
+                  </table>
+  
+                  <br>
+                  <br> The respective license terms for the respective Open Source Software files can be found at the end of this document.
+                  <br>
+                  <br> If any Open Source Software contained in the Modbus Client node is licensed under GNU General Public License (GPL), GNU Lesser General Public License (LGPL), Mozilla Public License (MPL) or any other Open Source Software license, which requires that source code is to be made available, you can download the corresponding source code of the Open Source Software from the aforementioned link.
+                  <br>
+                  <br>
+                  <table class="licenseDetails">
+                      <tr>
+                          <th>The Licenses in detail</th>
+                      </tr>
+                      <tr>
+                          <td>
+                              <table>
+                                  <tr>
+                                      <th class="sub">MIT License</th>
+                                  </tr>
+                                  <tr>
+                                      <td>
+                                          <center>Copyright 2020 Schneider Electric</center>
+                                          <br>
+                                          <br> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+                                          <br>
+                                          <br> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+                                          <br>
+                                          <br> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+                                          <br>
+                                          <br>
+                                      </td>
+                                  </tr>
+                              </table>
+                          </td>
+                      </tr>
+                      <tr>
+                          <td>
+                              <table>
+                                  <tr>
+                                      <th class="sub">Apache-2.0 License</th>
+                                  </tr>
+                                  <tr>
+                                      <td style="white-space: pre-wrap;">
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. Definitions.
+
+  "License" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.
+
+  "Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.
+
+  "Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, "control" means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.
+
+  "You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License.
+
+  "Source" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.
+
+  "Object" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.
+
+  "Work" shall mean the work of authorship, whether in Source or
+  Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below).
+
+  "Derivative Works" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof.
+
+  "Contribution" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, "submitted" means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as "Not a Contribution."
+
+  "Contributor" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and subsequently incorporated within the Work.
+
+2. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, publicly display, publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or Object form.
+
+3. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor that are necessarily infringed by their Contribution(s) alone or by combination of their Contribution(s) with the Work to which such Contribution(s) was submitted. If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Work or a Contribution incorporated within the Work constitutes direct or contributory patent infringement, then any patent licenses granted to You under this License for that Work shall terminate as of the date such litigation is filed.
+
+4. Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without modifications, and in Source or Object form, provided that You meet the following conditions:
+
+  (a) You must give any other recipients of the Work or Derivative Works a copy of this License; and
+
+  (b) You must cause any modified files to carry prominent notices stating that You changed the files; and
+
+  (c) You must retain, in the Source form of any Derivative Works that You distribute, all copyright, patent, trademark, and attribution notices from the Source form of the Work, excluding those notices that do not pertain to any part of the Derivative Works; and
+
+  (d) If the Work includes a "NOTICE" text file as part of its distribution, then any Derivative Works that You distribute must include a readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, provided that such additional attribution notices cannot be construed as modifying the License.
+
+  You may add Your own copyright statement to Your modifications and may provide additional or different license terms and conditions for use, reproduction, or distribution of Your modifications, or for any such Derivative Works as a whole, provided Your use, reproduction, and distribution of the Work otherwise complies with the conditions stated in this License.
+
+5. Submission of Contributions. Unless You explicitly state otherwise, any Contribution intentionally submitted for inclusion in the Work by You to the Licensor shall be under the terms and conditions of this License, without any additional terms or conditions. Notwithstanding the above, nothing herein shall supersede or modify the terms of any separate license agreement you may have executed with Licensor regarding such Contributions.
+
+6. Trademarks. This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor, except as required for reasonable and customary use in describing the origin of the Work and reproducing the content of the NOTICE file.
+
+7. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each Contributor provides its Contributions) on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for determining the appropriateness of using or redistributing the Work and assume any risks associated with Your exercise of permissions under this License.
+
+8. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall any Contributor be liable to You for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the use or inability to use the Work (including but not limited to damages for loss of goodwill, work stoppage, computer failure or malfunction, or any and all other commercial damages or losses), even if such Contributor has been advised of the possibility of such damages.
+
+9. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your accepting any such warranty or additional liability.
+
+END OF TERMS AND CONDITIONS
+
+APPENDIX: How to apply the Apache License to your work.
+
+  To apply the Apache License to your work, attach the following boilerplate notice, with the fields enclosed by brackets "[]" replaced with your own identifying information. (Don't include the brackets!)  The text should be enclosed in the appropriate comment syntax for the file format. We also recommend that a file or class name and description of purpose be included on the same "printed page" as the copyright notice for easier identification within third-party archives.
+
+  <center>Copyright 2020 Schneider Electric</center>
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+                                           
+                                      </td>
+                                  </tr>
+                              </table>
+                          </td>
+                      </tr>
+                  </table>
+              </div>
+          </section>
+          <section id="se-node-help" class="tab-panel">
+            <!-- US 16117 Changed as per SSG Team -->
+            <h2> Please <a href="/modbus/Modbus_Tag_Help_Manual" target="_blank">click here</a> to view the SE Modbus User Manual. </h2>
+          </section>
+      </div>
+  </div>
+</script>
+<style>
+  .licenseTable {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.licenseTable td, .licenseTable th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+.licenseTable tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+
+.licenseDetails {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.licenseDetails td, .licenseDetails th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+.licenseDetails th.sub {
+  background: #000;;
+  color: #fff;
+}
+/*
+ CSS for the help tabs
+*/
+.tabset > input[type="radio"] {
+  position: absolute;
+  left: -200vw;
+}
+
+.tabset .tab-panel {
+  display: none;
+}
+
+.tabset > input:first-child:checked ~ .tab-panels > .tab-panel:first-child,
+.tabset > input:nth-child(3):checked ~ .tab-panels > .tab-panel:nth-child(2),
+.tabset > input:nth-child(5):checked ~ .tab-panels > .tab-panel:nth-child(3),
+.tabset > input:nth-child(7):checked ~ .tab-panels > .tab-panel:nth-child(4),
+.tabset > input:nth-child(9):checked ~ .tab-panels > .tab-panel:nth-child(5),
+.tabset > input:nth-child(11):checked ~ .tab-panels > .tab-panel:nth-child(6) {
+  display: block;
+}
+
+.tabset > label {
+    position: relative;
+    display: inline-block;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    cursor: pointer;
+    font-weight: 600;
+    width: 45%;
+    text-align: center;
+}
+
+.tabset > label:hover,
+.tabset > input:checked + label,
+.tabset > input:focus + label {
+  color: #06c;
+}
+
+
+.tabset > input:checked + label {
+  border-color: #ccc;
+  border-bottom: 1px solid #fff;
+  margin-bottom: -1px;
+}
+
+.tab-panel {
+  padding: 2px 0;
+  border-top: 1px solid #ccc;
+}
+</style>

@@ -1,0 +1,27 @@
+{
+    "name": "se-node-red-aveva_insight",
+    "version": "2.1.0",
+    "description": "SE Aveva Insight node collects data from the collection node and sends the data to AVEVA Insight cloud",
+    "main": "none",
+    "node-red": {
+        "nodes": {
+            "SE_Aveva_Insight": "nodes/SE_Aveva_Insight.js"
+        }
+    },
+    "license": "Schneider Electric",
+    "author": "Schneider Electric",
+    "dependencies": {
+        "json-size": "^1.0.0",
+        "jsonfile": "^4.0.0",
+        "node-json-db": "^0.9.2",
+        "pdfreader": "^1.0.7",
+        "request": "^2.81.0",
+        "winston": "3.3.3"
+    },
+    "helpmanual": {
+        "url": "https://wain05400.apa.gad.schneider-electric.com:4878/-/static/se-node-red-aveva_insight/Aveva_Insight_Help_Manual.pdf"
+    },
+    "licensetext": {
+        "url": "https://wain05400.apa.gad.schneider-electric.com:4878/-/static/se-node-red-aveva_insight/Aveva_Insight_License.pdf"
+    }
+}

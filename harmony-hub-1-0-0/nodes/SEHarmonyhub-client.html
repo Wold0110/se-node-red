@@ -1,0 +1,546 @@
+ <!--Register Node Type-->
+<script type='text/javascript'>
+  RED.nodes.registerType('SEHarmonyHub-Client', {
+    category: 'config',
+    defaults: {
+
+      name: { value: "HarmonyHub" },
+	    version: {value: "1.0.0"},
+	    clienttype: { value: "tcp", required: true },
+      bufferCommands: {value: "1"},
+       //stateLogEnabled: {value: false},
+
+      tcpHost: {
+        value: "127.0.0.1", required: true, validate: function (val) {
+          if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(val)) {
+            return (true)
+          }
+          //alert("SE Modbus Slave Configuration: Incorrect value for IP Field")  
+          return (false)
+        }
+      },
+      tcpPort: {
+        value: 502, required: true, validate: function (val) {
+          if (RED.validators.number() && (val >= 0 && val <= 65535) && (val % 1) === 0 && val !== "") {
+            return true;
+          }
+          else {
+            //alert("SE Modbus Slave Configuration: Incorrect value for Port Field")  
+            return false;
+          }
+        }
+      },
+      tcpType: { value: "DEFAULT", required: true },
+
+      serialPort: { value: "/dev/ttyUSB", required: true },
+      serialType: { value: "RTU", required: true },
+      unit_id: {
+          value: 1, validate: function (val) {
+              if (RED.validators.number() && (val >= 0 && val <= 65535) && (val % 1) === 0 && val !== "") {
+                  return true;
+              }
+              else {
+                  return false;
+              }
+          }
+      },
+      serialBaudrate: { value: 19200, required: true, validate: RED.validators.number() },
+      serialDatabits: { value: 8, required: true, validate: RED.validators.number() },
+      serialStopbits: { value: 1, required: true, validate: RED.validators.number() },
+      serialParity: { value: "none", required: true },
+      serialConnectionDelay: {
+        value: 100, validate: function (val) {
+          if (RED.validators.number() && (val >= 0 && val <= 65535) && (val % 1) === 0 && val !== "") {
+            return true;
+          }
+          else {
+            //alert("SE Modbus Slave Configuration: Incorrect value for Connection delay Field")  
+            return false;
+          }
+        }
+      },
+      unit_id: { value: 1 , validate: function (val) {
+          if (RED.validators.number() && (val >= 1 && val <= 255) && (val % 1) === 0 && val !== "") {
+            return true;
+          } else {
+            return false;
+          }
+        }
+      },
+      commandDelay: {
+        value: 100, validate: function (val) {
+          if (RED.validators.number() && (val >= 0 && val <= 65535) && (val % 1) === 0 && val !== "") {
+            return true;
+          }
+          else {
+            //alert("SE Modbus Slave Configuration: Incorrect value for Queue Delay Field")  
+            return false;
+          }
+        }
+      },
+      clientTimeout: {
+        value: 1000, validate: function (val) {
+          if (RED.validators.number() && (val >= 0 && val <= 65535) && (val % 1) === 0 && val !== "") {
+            return true;
+          }
+          else {
+            //alert("SE Modbus Slave Configuration: Incorrect value for Timeout Field")  
+            return false;
+          }
+        }
+      },
+      reconnectTimeout: {
+        value: 2000, validate: function (val) {
+          if (RED.validators.number() && (val >= 0 && val <= 65535) && (val % 1) === 0 && val !== "") {
+            return true;
+          }
+          else {
+            //alert("SE Modbus Slave Configuration: Incorrect value for Reconnect Timeout Field")  
+            return false;
+          }
+        }
+      },
+    },
+    label: function () {
+      let node = this
+      // if (node.clienttype == "tcp") {
+      //   return node.name || "modbus-tcp@" + node.tcpHost + ":" + node.tcpPort
+      // } else {
+      //   return node.name || "modbus-serial@" + node.serialPort + ':' + node.serialBaudrate
+      // }
+      
+      if(node.clienttype == 'tcp')
+        node.name = node.name||"modbus-tcp@" + node.tcpHost + ":" + node.tcpPort;
+      else{
+        node.name = node.name||"modbus-serial@" + node.serialPort + ':' + node.serialBaudrate;
+      }
+      return node.name;
+    },
+    oneditprepare: function () {
+
+      let previous = null
+      let node = this
+      node.ports = []
+      let clientTypeSelector = $('#node-config-input-clienttype')
+      let inputsSerial = $("#node-inputs-modbus-serial")
+      let inputsSerialExtras = $("#node-inputs-modbus-serial-extras")
+      let inputsTCP = $("#node-inputs-modbus-tcp")
+      let queueButton = $("#node-config-input-bufferCommands")
+      let queueProxy = $("#node-inputs-queue-proxy")
+
+      queueButton.change(function () {
+          if (queueButton.val() == '1') {
+            queueProxy.show();
+          }
+          else {
+            queueProxy.hide();                   
+          }
+      })
+
+
+      clientTypeSelector.on('focus', function () {
+        previous = this.value
+      }).change(function () {
+
+        if (previous == null) {
+          previous = $("#node-config-input-clienttype").val()
+        }
+
+        if (node.unit_id) {
+          node.unit_id = parseInt(node.unit_id)
+        }
+
+        if (node.commandDelay) {
+          node.commandDelay = parseInt(node.commandDelay)
+        }
+
+        if (node.clientTimeout) {
+          node.clientTimeout = parseInt(node.clientTimeout)
+        }
+
+        if (node.reconnectTimeout) {
+          node.reconnectTimeout = parseInt(node.reconnectTimeout)
+        }
+
+        switch (clientTypeSelector.val()) {
+          case 'tcp':
+            inputsSerialExtras.hide()
+            inputsSerial.hide()
+            inputsTCP.show()
+            $('#node-config-input-unit_id').val('248');
+            node.unit_id = 248;
+            // $('input[name="unit"]').val('248');
+            $('#node-config-input-unit_id').attr('disabled',true);  
+            if (node.tcpHost) {
+              node.tcpHost.required = true
+              node.tcpPort.required = true
+              if (node.tcpType) {
+                node.tcpType.required = true
+              }
+            }
+
+            if (node.serialPort) {
+              node.serialPort.required = false
+              if (node.serialType) {
+                node.serialType.required = false
+              }
+              node.serialBaudrate.required = false
+            }
+
+            if (node.serialDatabits) {
+              node.serialDatabits.required = false
+              node.serialStopbits.required = false
+              node.serialParity.required = false
+            }
+            break
+          case 'serial':
+          case 'simpleser':
+            $('#node-config-input-unit_id').attr('disabled',false);  
+            if (clientTypeSelector.val() === 'simpleser') {
+              inputsSerialExtras.hide()
+              node.serialDatabits.value = 8
+              node.serialStopbits.value = 1
+              node.serialParity.value = 'none'
+            } else {
+              inputsSerialExtras.show()
+            }
+
+            inputsSerial.show()
+            inputsTCP.hide()
+
+            if (node.tcpHost) {
+              node.tcpHost.required = false
+              node.tcpPort.required = false
+              if (node.tcpType) {
+                node.tcpType.required = false
+              }
+            }
+
+            if (node.serialPort) {
+              node.serialPort.required = true
+              if (node.serialType) {
+                node.serialType.required = true
+              }
+              node.serialBaudrate.required = true
+            }
+
+            if (node.serialDatabits) {
+              node.serialDatabits.required = true
+              node.serialStopbits.required = true
+              node.serialParity.required = true
+            }
+            break
+          default:
+            break
+        }
+      })
+
+      try {
+        $("#node-config-input-serialPort").autocomplete("destroy")
+      }
+      catch (err) {
+      }
+
+      $("#node-config-lookup-serial").click(function () {
+        $("#node-config-lookup-serial").addClass('disabled')
+
+        $.getJSON('serialports_HHub', function (data) {
+          $("#node-config-lookup-serial").removeClass('disabled')
+          node.ports = []
+
+          $.each(data, function (i, port) {
+            node.ports.push(port.comName)
+          })
+
+          $("#node-config-input-serialPort").autocomplete({
+            source: node.ports,
+            minLength: 0,
+            close: function (event, ui) {
+              $("#node-config-input-serialPort").autocomplete("destroy")
+            }
+          }).autocomplete("search", "")
+        })
+      })
+    }
+  }) 
+</script>
+<script type='text/x-red' data-template-name='SEHarmonyHub-Client'>
+  <div class="heading"> 
+    <label> Schneider Electric </label> 
+  </div>
+	
+	<!--Page Break-->
+	<br>
+  <div class='form-row'> <label for='node-config-input-name'><i class='icon-tag'></i> <span 
+ data-i18n='node-red:common.label.name'></span></label> <input type='text' id='node-config-input-name' 
+ placeholder='Name'> </div>
+ <div class='form-row'>
+   <label for='node-config-input-clienttype'><i class='icon-bookmark'>
+ </i> <span data-i18n='modbus-contrib.label.type'></span></label> 
+ <select type='text' id='node-config-input-clienttype' style='width:140px'> 
+   <option value='tcp' select>TCP</option>
+   <option value='serial'>Serial</option> 
+  </select>
+</div>
+<div class='form-row'> 
+    <label for='node-config-input-unit_id'><i class='icon-bookmark'></i><span data-i18n='modbus-contrib.label.unit_id'>Unit ID</span></label>
+    <input type='text' id='node-config-input-unit_id' 
+    placeholder='1-255' style='max-width:80px'>
+</div>
+
+  <hr> <div id='node-inputs-modbus-tcp'> 
+
+<div class='form-row'> 
+ <label for='node-config-input-tcpHost'><i class='icon-bookmark'></i> 
+ <span data-i18n='modbus-contrib.label.host'></span>
+ </label> <input type='text' id='node-config-input-tcpHost'> </div> <div class='form-row'> <label 
+ for='node-config-input-tcpPort'><i class='icon-bookmark'></i> <span data-i18n='modbus-contrib.label.port'></span>
+ </label> <input type='text' id='node-config-input-tcpPort'> </div> <div class='form-row'> <label 
+ for='node-config-input-tcpType'><i class='icon-bookmark'></i> <span data-i18n='modbus-contrib.label.tcpType'></span></label> <select type='text' 
+ id='node-config-input-tcpType' style='width:140px'> 
+ <option value='DEFAULT' select>DEFAULT</option>
+ <option value='TPC-RTU-BUFFERED'>RTU-BUFFERD</option>
+  </select> </div> </div> <div id='node-inputs-modbus-serial'> <div class='form-row'> <label 
+ for='node-config-input-serialPort'><i class='fa fa-random'></i> <span data-i18n='modbus-contrib.label.serialport'>
+ </span></label> <input type='text' id='node-config-input-serialPort' style='width:60%' 
+ placeholder='/dev/ttyUSB or COM4'> <a id='node-config-lookup-serial' class='btn'><i 
+ id='node-config-lookup-serial-icon' class='fa fa-search'></i></a> </div> <div class='form-row'> <label 
+ for='node-config-input-serialType'><i class='icon-bookmark'></i> <span data-i18n='modbus-contrib.label.serialType'>
+ </span></label> <select type='text' id='node-config-input-serialType' style='width:140px'> 
+   <option value='RTU-BUFFERD' select>RTU-BUFFERD</option>
+   <option value='RTU'>RTU</option>
+  </select> </div> <div
+  class='form-row'> <label for='node-config-input-serialBaudrate'><i class='icon-bookmark'></i> <span 
+ data-i18n='modbus-contrib.label.baudRate'></span></label> <select id='node-config-input-serialBaudrate' 
+ style='max-width:140px'> <option value='115200'>115200</option> <option value='57600'>57600</option> <option 
+ value='38400'>38400</option> <option value='19200'>19200</option> <option value='9600'>9600</option> <option 
+ value='4800'>4800</option> <option value='2400'>2400</option> <option value='1200'>1200</option> <option value='300'>
+ 300</option> <option value='110'>110</option> <option value='75'>75</option> </select> </div> </div> <div 
+ id='node-inputs-modbus-serial-extras'> <div class='form-row'> <label for='node-config-input-serialDatabits'><i 
+ class='icon-bookmark'></i> <span data-i18n='modbus-contrib.label.dataBits'></span></label> <select 
+ id='node-config-input-serialDatabits' style='max-width:80px'> <option value='8'>8</option> <option value='7'>7</option>
+  <option value='6'>6</option> <option value='5'>5</option> </select> </div> <div class='form-row'> <label 
+ for='node-config-input-serialStopbits'><i class='icon-bookmark'></i> <span data-i18n='modbus-contrib.label.stopBits'>
+ </span></label> <select id='node-config-input-serialStopbits' style='max-width:80px'> <option value='1'>1</option> 
+ <option value='1.5'>1.5</option> <option value='2'>2</option> </select> </div> <div class='form-row'> <label 
+ for='node-config-input-serialParity'><i class='icon-bookmark'></i> <span data-i18n='modbus-contrib.label.parity'>
+ </span></label> <select id='node-config-input-serialParity' style='max-width:80px'> <option value='none'>None</option> 
+ <option value='even'>Even</option> <option value='mark'>Mark</option> <option value='odd'>Odd</option> <option 
+ value='space'>Space</option> </select> </div> <div class='form-row'> <label 
+ for='node-config-input-serialConnectionDelay'> <i class='fa fa-random'></i> <span 
+ data-i18n='modbus-contrib.label.serialconnectiondelay'></span> </label> <input type='text' 
+ id='node-config-input-serialConnectionDelay' style='max-width:80px' placeholder='500'> </div> </div> <hr> 
+ <div class='form-row'> <label for='node-config-input-clientTimeout'><i 
+ class='icon-time'></i> <span data-i18n='modbus-contrib.label.timeout'></span></label> <input type='text' 
+ id='node-config-input-clientTimeout' placeholder='1000' style='max-width:80px'> </div> 
+ <div class='form-row'> 
+   <label for='node-config-input-reconnectTimeout'> <i class='icon-time'></i> 
+    <span data-i18n='modbus-contrib.label.reconnectTimeout'></span> 
+    </label> <input type='text' id='node-config-input-reconnectTimeout' placeholder='2000' style='max-width:80px'> 
+  </div> 
+<hr> 
+ <!-- <div class='form-row'> 
+ <label style='min-width:160px' for='node-config-input-stateLogEnabled'> 
+   <i class='fa fa-th'></i> 
+   <span data-i18n='modbus-contrib.label.stateLogEnabled'></span> </label> 
+   <input type='checkbox' id='node-config-input-stateLogEnabled' style='max-width:30px'> 
+ </div>     -->
+<!-- <div class="form-row">
+  <label for="node-config-input-bufferCommands"><i class="fa fa-random"></i> Queue commands</label>
+  <select type='text' id='node-config-input-bufferCommands'> 
+      <option value="1">Enable</option>
+      <option value="2">Disable</option>
+  </select>
+</div> -->
+
+<div id='node-inputs-queue-proxy'>
+<div class='form-row'> <label for='node-config-input-commandDelay'><i class='icon-time'></i>
+  Queue delay (ms)</label> <input type='text' id='node-config-input-commandDelay' 
+ placeholder=1 style='max-width:100px'> </div> 
+
+</div> 
+ </script>
+<script type='text/x-red' data-help-name='SEHarmonyHub-Client'>
+  <div class="tabset">
+    <input type="radio" name="tabset" id="h-tab1" aria-controls="se-node-license" checked>
+    <label for="h-tab1">LICENSE</label>
+    <input type="radio" name="tabset" id="h-tab2" aria-controls="se-node-help">
+    <label for="h-tab2">HELP</label>
+
+    <div class="tab-panels">
+        <section id="se-node-license" class="tab-panel">
+            <!-- Rectified CSS for License tab -->
+            <div style="text-align:justify;padding: 10px 5px;">
+                <center><h2>INFORMATION</h2></center>
+                <center>Open Source Software used in the SE Harmony Hub node</center>
+                <br>
+                <br> The SE Harmony Hub node contains, among other things, Open Source Software files, as specified below, developed by third parties and licensed under an Open Source Software license. These Open Source Software files are protected by copyright. Your right to use the Open Source Software is governed by the relevant applicable Open Source Software license conditions.
+                <br>
+                <br> Warranty regarding use of the Open Source Software:
+                <br>
+                <br> The following disclaimer applies to the GPL and LGPL components (if any) in relation to the rights holders: “this program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE”. See the GNU General Public License or the GNU Lesser General Public License for more details.
+                <br>
+                <br> For the remaining open source components, the liability exclusions of the rights holders apply as per the respective license.
+                <br>
+                <br> Schneider Electric SE and all of its subsidiaries (“Schneider Electric Group”) provide no warranty for the Open Source Software contained in the SE Harmony Hub node, if such Open Source Software is used in any manner other than intended by Schneider Electric Group. The licenses listed below define the warranty, if any, from the rights holders of the Open Source Software. Schneider Electric Group specifically disclaims any warranty for defects caused by altering any Open Source Software or the SE Harmony Hub node's configuration. Any warranty claims against Schneider Electric Group in the event that the Open Source Software contained in the SE Harmony Hub node infringes the intellectual property rights of a third party are excluded.
+                <br> Technical support, if any, will only be provided for unmodified software.
+                <br>
+                <br> Further use of Open Source Software:
+                <br>
+                <br> Your compliance with those license conditions will entitle you to use the Open Source Software as foreseen in the relevant license. In the event of conflicts between other Schneider Electric license conditions applicable to the SE Harmony Hub node and the Open Source Software license conditions, the Open Source Software conditions shall prevail. The Open Source Software is provided royalty-free (i.e. no fees are charged for exercising the licensed rights). The following Open Source Software is contained in the SE Harmony Hub node:
+                <br>
+                <br>
+                <table class="licenseTable">
+                    <tr>
+                        <th>Open Source Software file</th>
+                        <th>License</th>
+                        <th>Source Link</th>
+                    </tr>
+                    <tr>
+                        <td>modbus-serial</td>
+                        <td>ISC</td>
+                        <td>https://www.npmjs.com/package/modbus-serial</td>
+                    </tr>
+                    <tr>
+                        <td>Winston</td>
+                        <td>MIT</td>
+                        <td>https://www.npmjs.com/package/winston</td>
+                    </tr>
+                    <tr>
+                        <td>stately.js</td>
+                        <td>MIT</td>
+                        <td>https://www.npmjs.com/package/stately.js</td>
+                    </tr>
+                    <tr>
+                        <td>async-limiter</td>
+                        <td>MIT</td>
+                        <td>https://www.npmjs.com/package/async-limiter</td>
+                    </tr>
+                    <tr>
+                        <td>debug</td>
+                        <td>MIT</td>
+                        <td>https://www.npmjs.com/package/debug</td>
+                    </tr>
+                    <tr>
+                        <td>fs-extra</td>
+                        <td>MIT</td>
+                        <td>https://www.npmjs.com/package/fs-extra</td>
+                    </tr>
+                    <tr>
+                        <td>connect</td>
+                        <td>MIT</td>
+                        <td>https://www.npmjs.com/package/connect</td>
+                    </tr>
+                    <tr>
+                        <td>Stampit</td>
+                        <td>MIT</td>
+                        <td>https://www.npmjs.com/package/stampit</td>
+                    </tr>
+                    <tr>
+                        <td>Express</td>
+                        <td>MIT</td>
+                        <td>https://www.npmjs.com/package/express</td>
+                    </tr>
+                    <tr>
+                        <td>underscore</td>
+                        <td>MIT</td>
+                        <td>https://www.npmjs.com/package/underscore</td>
+                    </tr>
+                    <tr>
+                        <td>ws</td>
+                        <td>MIT</td>
+                        <td>https://www.npmjs.com/package/ws</td>
+                    </tr>
+                    <tr>
+                        <td>atob</td>
+                        <td>MIT</td>
+                        <td>https://www.npmjs.com/package/atob</td>
+                    </tr>
+                    <tr>
+                        <td>btoa</td>
+                        <td>MIT</td>
+                        <td>https://www.npmjs.com/package/btoa</td>
+                    </tr>
+                    <tr>
+                      <td>pdfreader</td>
+                      <td>MIT</td>
+                      <td>https://www.npmjs.com/package/pdfreader</td>
+                    </tr>
+                </table>
+
+                <br>
+                <br> The respective license terms for the respective Open Source Software files can be found at the end of this document.
+                <br>
+                <br> If any Open Source Software contained in the SE Harmony Hub node is licensed under GNU General Public License (GPL), GNU Lesser General Public License (LGPL), Mozilla Public License (MPL) or any other Open Source Software license, which requires that source code is to be made available, you can download the corresponding source code of the Open Source Software from the aforementioned link.
+                <br>
+                <br>
+                <table class="licenseDetails">
+                    <tr>
+                        <th>The Licenses in detail</th>
+                    </tr>
+                    <tr>
+                        <td>
+                            <table>
+                                <tr>
+                                    <th class="sub">ISC License</th>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <center>Copyright(c) 2020, Schneider-Electric</center>
+                                        <br>
+                                        <br> Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+                                        <br>
+                                        <br> THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+                                        <br>
+                                        <br>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <table>
+                                <tr>
+                                    <th class="sub">MIT License</th>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <center>Copyright 2020 Schneider-Electric</center>
+                                        <br>
+                                        <br> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+                                        <br>
+                                        <br> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+                                        <br>
+                                        <br> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+                                        <br>
+                                        <br>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+            </div>
+        </section>
+        <section id="se-node-help" class="tab-panel">
+          <!-- US 16117 -->
+          <h2>Please <a href="/harmonyhub/Harmony_Hub_Help_Manual"  target="_blank">click here </a> to view the SE Harmony Hub User Manual. </h2>
+</section>
+    </div>
+</div>
+ </script>
+<style>
+    .heading{
+        background:#32963f !important;
+        height: 25px;
+        padding: 5px;
+    } 
+    .heading label{
+        color:white !important;
+        font-weight:bold !important;
+        text-align: center;
+        padding-top: 3px;
+    }
+</style>

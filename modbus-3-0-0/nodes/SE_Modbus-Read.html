@@ -1,0 +1,912 @@
+<style>
+        .node_status_label{
+            text-transform: capitalize;
+        }
+        .heading, .footer {
+            background: #32963f !important;
+            height: 25px;
+            padding: 5px;
+        }
+    
+        .heading label, .footer label {
+            color: white !important;
+            font-weight: bold !important;
+            text-align: center;
+            padding-top: 3px;
+        }
+    
+        label {
+            margin: 0;
+            padding: 10px 5px 5px 5px;
+        }
+    
+        hr {
+            margin: 8px 0px;
+        }
+    
+        .tags-div input {
+            margin-right: 4px;
+        }
+    
+        .se-primary-btn {
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            box-sizing: border-box;
+            display: inline-block;
+            color: #fff !important;
+            background: #32ad3c;
+            border: 1px solid #32ad3c;
+            text-align: center;
+            margin: 0;
+            text-decoration: none;
+            cursor: pointer;
+            height: 34px;
+            line-height: 32px;
+            font-size: 13px;
+            padding: 0 10px;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+    
+        .se-primary-btn:hover {
+            background: #0e8818 !important;
+            border-color: #0e8818 !important;
+        }
+    
+        #main {
+            margin-top: 8px;
+        }
+    	/**User Story 14620***/
+        .input-tags[disabled] {
+            cursor: not-allowed;
+            color: #9b9b9b;
+            background-color: #ffffff;
+        }
+    
+        div.sticky {
+            position: -webkit-sticky;
+            position: sticky;
+            top: 0;
+            top: 0;
+            background-color: #ffff;
+            padding: 10px 0;
+        }
+    
+        .duplicate-error {
+            background: #ff3a3a !important;
+        }
+        .licenseTable {
+        font-family: arial, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+        }
+
+        .licenseTable td, .licenseTable th {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+        }
+
+        .licenseTable tr:nth-child(even) {
+        background-color: #f9f9f9;
+        }
+
+
+        .licenseDetails {
+        font-family: arial, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+        }
+
+        .licenseDetails td, .licenseDetails th {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+        }
+        .licenseDetails th.sub {
+        background: #000;;
+        color: #fff;
+        }
+        /*
+        CSS for the help tabs
+        */
+        .tabset > input[type="radio"] {
+        position: absolute;
+        left: -200vw;
+        }
+
+        .tabset .tab-panel {
+        display: none;
+        }
+
+        .tabset > input:first-child:checked ~ .tab-panels > .tab-panel:first-child,
+        .tabset > input:nth-child(3):checked ~ .tab-panels > .tab-panel:nth-child(2),
+        .tabset > input:nth-child(5):checked ~ .tab-panels > .tab-panel:nth-child(3),
+        .tabset > input:nth-child(7):checked ~ .tab-panels > .tab-panel:nth-child(4),
+        .tabset > input:nth-child(9):checked ~ .tab-panels > .tab-panel:nth-child(5),
+        .tabset > input:nth-child(11):checked ~ .tab-panels > .tab-panel:nth-child(6) {
+        display: block;
+        }
+
+        .tabset > label {
+            position: relative;
+            display: inline-block;
+            border: 1px solid transparent;
+            border-bottom: 0;
+            cursor: pointer;
+            font-weight: 600;
+            width: 45%;
+            text-align: center;
+        }
+
+        .tabset > label:hover,
+        .tabset > input:checked + label,
+        .tabset > input:focus + label {
+        color: #06c;
+        }
+
+
+        .tabset > input:checked + label {
+        border-color: #ccc;
+        border-bottom: 1px solid #fff;
+        margin-bottom: -1px;
+        }
+
+        .tab-panel {
+        padding: 2px 0;
+        border-top: 1px solid #ccc;
+        }
+    </style>
+    
+    <!--Register Node Type-->
+    <script type='text/javascript'>
+        RED.nodes.registerType("SE_Modbus-Read",
+            {
+                category: "modbus",
+                color: "#3DCD58",
+                defaults: {
+                    name: { value: "SEModbusRead", required: true, validate: RED.validators.regex(/^[a-zA-Z0-9]+$/) },
+                    version: { value: "3.0.0" },
+                    dataType: { value: "Coil", required: !0 },
+                    adr: {
+                        value: "", required: !0, validate: function (val) {
+                            if (RED.validators.number() && (val >= 0 && val <= 65535) && (val % 1) === 0) {
+                                return true;
+                            } else {
+                                alert("Incorrect value for Address Field");
+                                return false;
+                            }
+                        }
+                    },
+                    quantity: {
+                        value: "", required: !0, validate: function (val) {
+                            if (RED.validators.number() && (val > 0 && val <= 2000) && (val % 1) === 0) {
+                                return validateQuantity(val);
+                            } else {
+                                alert("Incorrect value for Quantity Field");
+                                return false;
+                            }
+                        }
+                    },
+    
+                    rate: {
+                        value: "1", required: !0, validate: function (val) {
+                            if (RED.validators.number() && (val > 0 && val <= 65535) && (val % 1) === 0) {
+                                return true;
+                            }
+                            else {
+                                alert("SEModbusRead: Incorrect value for Poll Rate Field");
+                                return false;
+                            }
+                        }
+                    },
+                    rateUnit: { value: "s", required: !0, validate: function (e) { return "ms" == e || "s" == e || "m" == e || "h" == e } },
+                    logging: { value: "1" },
+                    loggingLevel: { value: "error" },
+                    server: { type: "SE_Modbus-Client", required: !0 },
+                    alltags: { value: "" }
+    
+                },
+                inputs: 0,
+                outputs: 1,
+                icon: "mdbus-read.png",
+                paletteLabel: "SEModbusRead",
+                label: function () { return this.name || "SEModbusRead" },
+    
+                oneditprepare: function () {
+                    let node = this;
+                    globalNode = this;
+                    let loggingSelector = $('#node-input-logging')
+    
+                    let loggingDivision = $("#loggingDivision")
+                    loggingSelector.change(function () {
+                        if (loggingSelector.val() == '1') {
+                            loggingDivision.show();
+                        } else {
+                            loggingDivision.hide();
+                        }
+                    });
+    
+                    if ($('#node-input-alltags').val() != '') {
+                        $('#add-tag-btn').attr('disabled', false);
+                    }
+                }
+    
+            })
+        function enableAddTagButton() {
+            let start_address = $('#node-input-adr').val();
+            let total_quantity = $('#node-input-quantity').val();
+            let tagData = $('#node-input-alltags').val();
+            if (start_address >= 0 && total_quantity > 0) {
+                $('#add-tag-btn').attr('disabled', false);
+                if (tagData != '') {
+                    tagData = JSON.parse($('#node-input-alltags').val());
+                    let count = tagData.length;
+                    let diff = total_quantity - count;
+                    if (total_quantity != count) {
+                        if (total_quantity < count) {
+                            tagData.length = total_quantity;
+                        } else if (total_quantity > count) {
+                            let lastAddress = tagData[count - 1].address;
+                            for (let index = 1; index <= diff; index++) {
+                                tagData.push({
+                                    'address': (parseInt(lastAddress) + index),
+                                    'tag': '',
+                                    'type': 'INT',
+                                    'isEnabled': true
+                                })
+                            }
+                        }
+                        $('#node-input-alltags').val(JSON.stringify(tagData));
+                    }
+                } else {
+                    if ($('#node-input-alltags').val() == '') {
+                        addDefaultRegdata();
+                    }
+                }
+            } else {
+                $('#add-tag-btn').attr('disabled', true);
+                $('#node-input-alltags').val('');
+            }
+        }
+        function addDefaultRegdata() {
+            let start_address = $('#node-input-adr').val();
+            let total_quantity = $('#node-input-quantity').val();
+            let tagData = [];
+            for (let index = 0; index < total_quantity; index++) {
+                tagData.push({
+                    'address': (parseInt(start_address) + index),
+                    'tag': '',
+                    'type': 'INT',
+                    'isEnabled': true
+                })
+            }
+            $('#node-input-alltags').val(JSON.stringify(tagData));
+        }
+    
+        function updateAddress() {
+            let start_address = $('#node-input-adr').val();
+            let total_quantity = $('#node-input-quantity').val();
+            let alltags = $('#node-input-alltags').val();
+            let newData = [];
+            if (start_address != '' && total_quantity != '') {
+                start_address = parseInt($('#node-input-adr').val());
+                total_quantity = parseInt($('#node-input-quantity').val());
+                if (start_address >= 0 && total_quantity > 0) {
+                    if (alltags != '') {
+                        let tagData = JSON.parse($('#node-input-alltags').val());
+                        let count = tagData.length;
+                        for (let index = 0; index < count; index++) {
+                            tagData[index].address = start_address + index;
+                        }
+                        $('#node-input-alltags').val(JSON.stringify(tagData));
+                    } else {
+                        for (let index = 0; index < total_quantity; index++) {
+                            newData.push({
+                                'address': start_address + index,
+                                'tag': '',
+                                'type': 'INT',
+                                'isEnabled': true
+                            });
+                        }
+                        $('#node-input-alltags').val(JSON.stringify(newData));
+                    }
+                }
+            }
+        }
+    
+        function addTag() {
+            $('#tags').show("slide", { direction: "right" }, 0);
+            $('#main').hide();
+            $('#node-dialog-ok').prop('disabled', true);
+            $('#tagDivDisplay').html('');
+            let tagData = $('#node-input-alltags').val();
+            if (tagData != '') {
+                tagData = JSON.parse($('#node-input-alltags').val());
+                let tagData_length = tagData.length;
+                for (let index = 0; index < tagData_length; index++) {
+                    let floatOption = `<option value='REAL'>REAL</option>
+                                        <option value='DINT'>DINT</option>
+                                        <option value='UDINT'>UDINT</option>
+                                        <option value='DWORD'>DWORD</option>`;
+                    if (index == tagData_length - 1) {
+                        floatOption = `<option value='REAL' disabled>REAL</option>
+                                        <option value='DINT' disabled>DINT</option>
+                                        <option value='UDINT' disabled>UDINT</option>
+                                        <option value='DWORD' disabled>DWORD</option>`;
+                    }
+                    $('#tagDivDisplay').append(`<div class='form-row tags-div' style="display: flex;">
+                        <label><i class='icon-tag'></i>${tagData[index].address}</label>
+                        <input type='text' id='reg_${index}' value='${tagData[index].address}' style="display: none;"/>
+                        <input class="input-tags tagInputClass" type='text' id='tag_${index}' value='${tagData[index].tag}' data-index="${index}" maxlength="64" onkeypress="return validateTagName(event)" onblur="checkLastChar(event)" onkeyup="updateNextTagName(event)" onpaste="validateCopiedText(event, 'AlphaNumericSpecial')" placeholder='Tag'/> 
+                        <select class="input-tags" type='text' id='var_type_${index}' data-index="${index}" onfocus='setOldValue(event)' onchange='checkFor32BitType(event)'>
+                            <option value='INT' selected>INT</option>
+                            <option value='UINT'>UINT</option>
+                            <option value='WORD'>WORD</option>
+                            <option value='BOOLEAN'>BOOLEAN</option>
+                            ${floatOption}
+                        </select>
+                    </div>`);
+                    if (tagData[index].isEnabled) {
+                        $('#var_type_' + index).val(tagData[index].type);
+			//BugID 14516
+                        if(tagData[index].type === 'REAL' || tagData[index].type === 'DINT' || tagData[index].type === 'UDINT' || tagData[index].type === 'DWORD'){
+                            $('#var_type_' + (index-1) +' option[value="REAL"], #var_type_' + (index-1) +' option[value="DINT"], #var_type_' + (index-1) +' option[value="UDINT"], #var_type_' + (index-1) +' option[value="DWORD"]').prop('disabled', true);
+                        }
+                    } else {
+                        $('#tag_' + index).val(tagData[index - 1].tag).prop('disabled', true);
+                        $('#var_type_' + index).val(tagData[index - 1].type).prop('disabled', true);
+                    }
+                }
+            } else {
+                let start_address = parseInt($('#node-input-adr').val());
+                let total_quantity = parseInt($('#node-input-quantity').val());
+                for (let index = 0; index < total_quantity; index++) {
+                    let floatOption = `<option value='REAL'>REAL</option>
+                                        <option value='DINT'>DINT</option>
+                                        <option value='UDINT'>UDINT</option>
+                                        <option value='DWORD'>DWORD</option>`;
+                    if (index == tagData_length - 1) {
+                        floatOption = `<option value='REAL' disabled>REAL</option>
+                                        <option value='DINT' disabled>DINT</option>
+                                        <option value='UDINT' disabled>UDINT</option>
+                                        <option value='DWORD' disabled>DWORD</option>`;
+                    }
+                    $('#tagDivDisplay').append(`<div class='form-row tags-div' style="display: flex;">
+                        <label><i class='icon-tag'></i>${start_address + index}</label>
+                        <input type='text' id='reg_${index}' value='${start_address + index}' style="display: none;"/>
+                        <input class="input-tags tagInputClass" type='text' id='tag_${index}' value='' data-index="${index}" maxlength="64" onkeypress="return validateTagName(event)" onblur="checkLastChar(event)" onkeyup="updateNextTagName(event)" onpaste="validateCopiedText(event, 'AlphaNumericSpecial')" placeholder='Tag'/> 
+                        <select class="input-tags" type='text' id='var_type_${index}' data-index="${index}" onfocus='setOldValue(event)' onchange='checkFor32BitType(event)'>
+                            <option value='INT' selected>INT</option>
+                            <option value='UINT'>UINT</option>
+                            <option value='WORD'>WORD</option>
+                            <option value='BOOLEAN'>BOOLEAN</option>
+                            ${floatOption}
+                        </select>
+                    </div>`);
+                }
+            }
+        }
+        function hasDuplicateTags(e) {
+            let hasDuplicate = false;
+            let  currentTag = $(e.target).val().trim();
+            if (currentTag) {
+                $('.tags-div').each(function (index) {
+                    if ($(e.target).data('index') != index) {
+                        if (!$('input#tag_' + index).prop('disabled')) {
+                            let thisTag = $('input#tag_' + index).val().trim();
+                            if(thisTag){
+                                if (thisTag.toLowerCase() === currentTag.toLowerCase() ) {
+                                    hasDuplicate = true;
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            return hasDuplicate;
+        }
+        function goBack() {
+            $('#tags').hide();
+            $('#main').show("slide", { direction: "left" }, 0);
+            $('#node-dialog-ok').prop('disabled', false);
+        }
+        function addUpdateTags() {
+            let allData = [];
+            let isErrorInInput = false;
+            $('.tags-div').each(function (index) {
+                // if ($(this).children('input#tag_' + index).val() && !$('select#var_type_' + index + ' option:selected').val()) {
+                //     $(this).children('input#tag_' + index).addClass('input-error');
+                //     $(this).children('select#var_type_' + index).focus().addClass('input-error');
+                //     isErrorInInput = true;
+                // } else if (!$(this).children('input#tag_' + index).val() && $('select#var_type_' + index + ' option:selected').val()) {
+                //     $(this).children('input#tag_' + index).focus().addClass('input-error');
+                //     $(this).children('select#var_type_' + index).addClass('input-error');
+                //     isErrorInInput = true;
+                // } else {
+                //     if (!$(this).children('input#tag_' + index).prop('disabled')) {
+                //         allData.push({
+                //             'address': $(this).children('input#reg_' + index).val(),
+                //             'tag': $(this).children('input#tag_' + index).val(),
+                //             'type': $(this).children('select#var_type_' + index).val(),
+                //             'isEnabled': true
+                //         });
+                //     } else {
+                //         allData.push({
+                //             'address': $(this).children('input#reg_' + index).val(),
+                //             'tag': '',
+                //             'type': '',
+                //             'isEnabled': false
+                //         });
+                //     }
+                // }
+                if (!$(this).children('input#tag_' + index).prop('disabled')) {
+                    allData.push({
+                        'address': $(this).children('input#reg_' + index).val(),
+                        'tag': $(this).children('input#tag_' + index).val(),
+                        'type': $(this).children('select#var_type_' + index).val(),
+                        'isEnabled': true
+                    });
+                } else {
+                    allData.push({
+                        'address': $(this).children('input#reg_' + index).val(),
+                        'tag': '',
+                        'type': '',
+                        'isEnabled': false
+                    });
+                }
+            });
+            $('#node-dialog-ok').prop('disabled', false);
+            $('#tags').hide();
+            $('#main').show("slide", { direction: "left" }, 0);
+            $('#node-input-alltags').val(JSON.stringify(allData));
+        }
+        
+        var oldValue = '';
+        function setOldValue(e) {
+            oldValue = $(e.target).val();
+        }
+    
+        function checkFor32BitType(e) {
+            let curr = $(e.target).data('index');
+            let prev = $(e.target).data('index') - 1;
+            let next = $(e.target).data('index') + 1;
+            let tName = $('#tag_' + curr).val();
+            let cType = $(e.target).val();
+            $('#tag_' + curr).removeClass('input-error').trigger('keyup');
+            $(e.target).removeClass('input-error');
+            if (cType == 'REAL' || cType == 'DINT' || cType == 'UDINT' || cType == 'DWORD') {
+                $('input#tag_' + next).val(tName).prop('disabled', true);
+                $('select#var_type_' + next).val(cType).prop('disabled', true);
+                $('#tag_' + curr).trigger('keyup');
+                $("select#var_type_" + prev + " option[value*='REAL']").prop('disabled', true);
+                $("select#var_type_" + prev + " option[value*='DINT']").prop('disabled', true);
+                $("select#var_type_" + prev + " option[value*='UDINT']").prop('disabled', true);
+                $("select#var_type_" + prev + " option[value*='DWORD']").prop('disabled', true);
+            } else {
+                if (oldValue == 'REAL' || oldValue == 'DINT' || oldValue == 'UDINT' || oldValue == 'DWORD') {
+                    $('input#tag_' + next ).val('').prop('disabled', false);
+                    $('select#var_type_' + next).val('INT').prop('disabled', false);
+                }
+                $("select#var_type_" + prev + " option[value*='REAL']").prop('disabled', false);
+                $("select#var_type_" + prev + " option[value*='DINT']").prop('disabled', false);
+                $("select#var_type_" + prev + " option[value*='UDINT']").prop('disabled', false);
+                $("select#var_type_" + prev + " option[value*='DWORD']").prop('disabled', false);
+            }
+            $(e.target).blur();
+        }
+    
+        function updateNextTagName(e) {
+            if (hasDuplicateTags(e)) {
+                $(e.target).focus().addClass('duplicate-error');
+                $('.saveTagsBtn').prop('disabled', true);
+            } else {
+                $(e.target).removeClass('duplicate-error');
+                $('.saveTagsBtn').prop('disabled', false);
+                let curr = $(e.target).data('index');
+                let next = $(e.target).data('index') + 1;
+                let tName = $('#tag_' + curr).val();
+                let cType = $('select#var_type_' + curr).val();
+                $(e.target).removeClass('input-error');
+                $('select#var_type_' + curr).removeClass('input-error');
+                if (cType == 'REAL' || cType == 'DINT' || cType == 'UDINT' || cType == 'DWORD') {
+                    $('input#tag_' + next).val(tName).prop('disabled', true);
+                    $('select#var_type_' + next).val(cType).prop('disabled', true);
+                }
+            }
+        }
+	//Bug 15210 and 18118
+        function validateTagName(e){
+            var keyCode = e.keyCode || e.which;
+            var regex = /^[a-zA-Z0-9._]+$/;
+            var isValid = regex.test(String.fromCharCode(keyCode));
+            return isValid;
+        }
+    // Bug 18118
+        function validateMBTName(e){
+            var keyCode = e.keyCode || e.which;
+            var regex = /^[a-zA-Z0-9]+$/;
+            var isValid = regex.test(String.fromCharCode(keyCode));
+            return isValid;
+        }
+
+        function checkAndRemoveLastChar(str){
+            if(str.endsWith('.') || str.endsWith('_')){
+                return checkAndRemoveLastChar(str.slice(0, -1));
+            } else{
+                return str;
+            }
+        }
+
+        function checkLastChar(e){
+            const finalText = checkAndRemoveLastChar(e.target.value);
+            $(e.target).val(finalText);
+        }
+
+        function validateCopiedText(e, type){
+            var data = e.clipboardData.getData('text');
+            var regex;
+            if(type === 'AlphaNumeric'){
+                regex = /^[a-zA-Z0-9]+$/;
+            } else if(type === 'Numeric'){
+                regex = /^[0-9]+$/;
+            } else if(type === 'AlphaNumericSpecial'){
+                regex = /^[a-zA-Z0-9._]+$/;
+            }
+            var isValid = regex.test(data);
+            if(!isValid){
+                e.preventDefault();
+            }
+            return isValid;
+        }
+
+        // Bug ID 15210
+        let selStart = '';
+        let selEnd = '';
+        function replaceRange(str, start, end, substitute) {
+            return str.substring(0, start) + substitute + str.substring(end);
+        }
+        function insertChar(str, index, substitute) { 
+            return str.slice(0, index) + substitute + str.slice(index); 
+        } 
+        function selectText(event){
+            selStart = event.target.selectionStart;
+            selEnd = event.target.selectionEnd;
+        }
+        function doGetCaretPosition (oField) {
+            // Initialize
+            var iCaretPos = 0;
+            // IE Support
+            if (document.selection) { 
+            // Set focus on the element
+            oField.focus ();
+            // To get cursor position, get empty selection range
+            var oSel = document.selection.createRange ();
+            // Move selection start to 0 position
+            oSel.moveStart ('character', -oField.value.length);
+            // The caret position is selection length
+            iCaretPos = oSel.text.length;
+            }
+            // Firefox support
+            else if (oField.selectionStart || oField.selectionStart == '0')
+            iCaretPos = oField.selectionStart;
+            // Return results
+            return (iCaretPos);
+        }
+        //BUG Id: 15437
+        function validateNumber(evt){
+            const min = $(evt.target).data('min');
+            const max = $(evt.target).data('max');
+            const oldVal = evt.target.value;
+            const keyCode = (evt.which) ? evt.which : evt.keyCode;
+            if(keyCode >= 48 && keyCode <= 57){
+                let newVal;
+                if(selStart !== '' && selEnd !== ''){
+                    if(selStart === 0 && selEnd === 5){
+                        newVal = parseInt(evt.key);
+                    } else{
+                        newVal = parseInt(replaceRange(oldVal, selStart, selEnd, evt.key));
+                    }
+                } else {
+                    newVal = parseInt(insertChar(oldVal, doGetCaretPosition(evt.target), evt.key));
+                }
+                selStart = '';
+                selEnd = '';
+                return (newVal >= min && newVal <= max);
+            } else {
+                return false;
+            }
+        }
+
+        function validateQuantity(val){
+            var fcType = $('#node-input-dataType').val();
+            if(fcType){
+                if(fcType == 'Coil' || fcType == 'Input'){
+                    if(val > 2000){
+                        alert('Quantity should not more than 2000');
+                        return false;
+                    } else {
+                        return true;
+                    }
+                } else {
+                    if(val > 125){
+                        alert('Quantity should not more than 125');
+                        return false;
+                    } else {
+                        return true;
+                    }
+                }
+            } else{
+                return true;
+            }
+        }
+        //Bug Id: 9459
+        //BUG Id: 15437
+        function changeReadQuantityPlaceholder(e){
+            if(e.target.value == 'Coil' || e.target.value == 'Input'){
+                $('#node-input-quantity').attr('placeholder', '1-2000').data('min', '1').data('max', '2000');
+            } else {
+                $('#node-input-quantity').attr('placeholder', '1-125').data('min', '1').data('max', '125');
+            }
+        }
+    </script>
+    
+    <!--Configuration Parameters : Input From Users-->
+    <script type="text/x-red" data-template-name="SE_Modbus-Read">
+             <div id="main">
+             <div class="form-row">
+                <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+                <input type="text" id="node-input-name" placeholder="Name" maxlength="32" onkeypress="return validateMBTName(event)" onpaste="validateCopiedText(event, 'AlphaNumeric')">
+             </div>
+             <div class="form-row">
+                <label for="node-input-dataType"><i class="icon-list"></i> FC</label>
+                <select id="node-input-dataType" onchange="changeReadQuantityPlaceholder(event)">
+                   <option value="Coil">FC 1: Read Coil Status</option>
+                   <option value="Input">FC 2: Read Input Status</option>
+                   <option value="HoldingRegister">FC 3: Read Holding Registers</option>
+                   <option value="InputRegister">FC 4: Read Input Registers</option>
+                </select>
+             </div>
+             <div class="form-row">
+                <label for="node-input-adr"><i class="icon-home"></i> Address</label>
+                <input type="text" id="node-input-adr" placeholder="0:65535" data-min="0" data-max="65535" class="range" onselect="selectText(event)" onkeypress="return validateNumber(event)" onkeyup="updateAddress()" onblur="enableAddTagButton()" onpaste="validateCopiedText(event, 'Numeric')">
+             </div>
+             <div class="form-row">
+                <label for="node-input-quantity"><i class="icon-bookmark"></i> Quantity</label>
+                <input type="text" id="node-input-quantity" placeholder="1-2000" style="max-width:200px" data-min="1" data-max="2000" class="range" onselect="selectText(event)" onkeypress="return validateNumber(event)" onblur="enableAddTagButton()" onpaste="validateCopiedText(event, 'Numeric')">
+                <button id="add-tag-btn" class="editor-button" onclick="addTag()" disabled>Add Tag</button>
+                <input type="text" id="node-input-alltags" style="display: none;"/>
+             </div>
+             <div class="form-row">
+                <label for="node-input-rate"><i class="icon-bookmark"></i> Poll Rate </label>
+                <input type="text" id="node-input-rate" placeholder="1-65535" data-min="1" data-max="65535" class="range" onselect="selectText(event)" onkeypress="return validateNumber(event)" style="max-width:120px" onpaste="validateCopiedText(event, 'Numeric')">
+                <select id="node-input-rateUnit" style="max-width:160px">
+                   <option value="ms">millisecond(s)</option>
+                   <option value="s">second(s)</option>
+                   <option value="m">minute(s)</option>
+                   <option value="h">hour(s)</option>
+                </select>
+             </div>
+             <div class="form-row">
+                <label for="node-input-server"><i class="icon-globe"></i> Server</label>
+                <input type="text" id="node-input-server">
+             </div>
+             <div class="form-row">
+                <label for="node-input-logging"><i class="fa fa-random"></i> Logging</label>
+                <select type='text' id='node-input-logging'>
+                   <option value="1">Enable</option>
+                   <option value="0">Disable</option>
+                </select>
+             </div>
+             <div class="form-row" id="loggingDivision">
+                <div class="form-row">
+                   <label for="node-input-loggingLevel"><i class="fa fa-random"></i> Level</label>
+                   <select type='text' id='node-input-loggingLevel'>
+                      <option value="error">Alert only</option>
+                      <option value="info">All events</option>
+                   </select>
+                </div>
+             </div>
+        </div>
+        <div id="tags" style="display: none;">
+            <div class="sticky">
+                <button class="editor-button" onclick="goBack()">Back</button>
+                <button class="se-primary-btn pull-right saveTagsBtn" onclick="addUpdateTags()">Save Tags</button>
+                <hr>
+            </div>
+            
+            <div id="tagDivDisplay"></div>
+    
+        </div>
+        </script>
+    
+    
+    <script type="text/x-red" data-help-name="SE_Modbus-Read">
+        <div class="tabset">
+            <input type="radio" name="tabset" id="h-tab1" aria-controls="se-node-license" checked>
+            <label for="h-tab1">LICENSE</label>
+            <input type="radio" name="tabset" id="h-tab2" aria-controls="se-node-help">
+            <label for="h-tab2">HELP</label>
+        
+            <div class="tab-panels">
+                <section id="se-node-license" class="tab-panel">
+                    <div style="padding: 10px 5px;text-align: justify;">
+                        <center><h2>INFORMATION</h2></center>
+                        <center>Open Source Software used in the Modbus Read node</center>
+                        <br>
+                        <br> The Modbus Read node contains, among other things, Open Source Software files, as specified below, developed by third parties and licensed under an Open Source Software license. These Open Source Software files are protected by copyright. Your right to use the Open Source Software is governed by the relevant applicable Open Source Software license conditions.
+                        <br>
+                        <br> Warranty regarding use of the Open Source Software:
+                        <br>
+                        <br> The following disclaimer applies to the GPL and LGPL components (if any) in relation to the rights holders: “this program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE”. See the GNU General Public License or the GNU Lesser General Public License for more details.
+                        <br>
+                        <br> For the remaining open source components, the liability exclusions of the rights holders apply as per the respective license.
+                        <br>
+                        <br> Schneider Electric SE and all of its subsidiaries (“Schneider Electric Group”) provide no warranty for the Open Source Software contained in the Modbus Read node, if such Open Source Software is used in any manner other than intended by Schneider Electric Group. The licenses listed below define the warranty, if any, from the rights holders of the Open Source Software. Schneider Electric Group specifically disclaims any warranty for defects caused by altering any Open Source Software or the Modbus Read node's configuration. Any warranty claims against Schneider Electric Group in the event that the Open Source Software contained in the Modbus Read node infringes the intellectual property rights of a third party are excluded.
+                        <br> Technical support, if any, will only be provided for unmodified software.
+                        <br>
+                        <br> Further use of Open Source Software:
+                        <br>
+                        <br> Your compliance with those license conditions will entitle you to use the Open Source Software as foreseen in the relevant license. In the event of conflicts between other Schneider Electric license conditions applicable to the Modbus Read node and the Open Source Software license conditions, the Open Source Software conditions shall prevail. The Open Source Software is provided royalty-free (i.e. no fees are charged for exercising the licensed rights). The following Open Source Software is contained in the Modbus Read node:
+                        <br>
+                        <br>
+                        <table class="licenseTable">
+                            <tr>
+                                <th>Open Source Software file</th>
+                                <th>License</th>
+                                <th>Source Link</th>
+                            </tr>
+                            <tr>
+                                <td>node-json-db </td>
+                                <td>MIT</td>
+                                <td>https://www.npmjs.com/package/node-json-db</td>
+                            </tr>
+                            <tr>
+                                <td>request</td>
+                                <td>Apache-2.0</td>
+                                <td>https://www.npmjs.com/package/request</td>
+                            </tr>
+                            <tr>
+                                <td>Winston</td>
+                                <td>MIT</td>
+                                <td>https://www.npmjs.com/package/winston</td>
+                            </tr>
+                            <tr>
+                                <td>json-size</td>
+                                <td>MIT</td>
+                                <td>https://www.npmjs.com/package/json-size</td>
+                            </tr>
+                            <tr>
+                                <td>jsonfile</td>
+                                <td>MIT</td>
+                                <td>https://www.npmjs.com/package/jsonfile</td>
+                            </tr>
+                        </table>
+        
+                        <br>
+                        <br> The respective license terms for the respective Open Source Software files can be found at the end of this document.
+                        <br>
+                        <br> If any Open Source Software contained in the Modbus Read node is licensed under GNU General Public License (GPL), GNU Lesser General Public License (LGPL), Mozilla Public License (MPL) or any other Open Source Software license, which requires that source code is to be made available, you can download the corresponding source code of the Open Source Software from the aforementioned link.
+                        <br>
+                        <br>
+                        <table class="licenseDetails">
+                            <tr>
+                                <th>The Licenses in detail</th>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <table>
+                                        <tr>
+                                            <th class="sub">MIT License</th>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <center>Copyright 2020 Schneider Electric</center>
+                                                <br>
+                                                <br> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+                                                <br>
+                                                <br> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+                                                <br>
+                                                <br> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+                                                <br>
+                                                <br>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <table>
+                                        <tr>
+                                            <th class="sub">Apache-2.0 License</th>
+                                        </tr>
+                                        <tr>
+                                            <td style="white-space: pre-wrap;">
+    TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+    
+    1. Definitions.
+    
+        "License" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.
+    
+        "Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.
+    
+        "Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, "control" means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.
+    
+        "You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License.
+    
+        "Source" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.
+    
+        "Object" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.
+    
+        "Work" shall mean the work of authorship, whether in Source or
+        Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below).
+    
+        "Derivative Works" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof.
+    
+        "Contribution" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, "submitted" means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as "Not a Contribution."
+    
+        "Contributor" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and subsequently incorporated within the Work.
+    
+    2. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, publicly display, publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or Object form.
+    
+    3. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor that are necessarily infringed by their Contribution(s) alone or by combination of their Contribution(s) with the Work to which such Contribution(s) was submitted. If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Work or a Contribution incorporated within the Work constitutes direct or contributory patent infringement, then any patent licenses granted to You under this License for that Work shall terminate as of the date such litigation is filed.
+    
+    4. Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without modifications, and in Source or Object form, provided that You meet the following conditions:
+    
+        (a) You must give any other recipients of the Work or Derivative Works a copy of this License; and
+    
+        (b) You must cause any modified files to carry prominent notices stating that You changed the files; and
+    
+        (c) You must retain, in the Source form of any Derivative Works that You distribute, all copyright, patent, trademark, and attribution notices from the Source form of the Work, excluding those notices that do not pertain to any part of the Derivative Works; and
+    
+        (d) If the Work includes a "NOTICE" text file as part of its distribution, then any Derivative Works that You distribute must include a readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, provided that such additional attribution notices cannot be construed as modifying the License.
+    
+        You may add Your own copyright statement to Your modifications and may provide additional or different license terms and conditions for use, reproduction, or distribution of Your modifications, or for any such Derivative Works as a whole, provided Your use, reproduction, and distribution of the Work otherwise complies with the conditions stated in this License.
+    
+    5. Submission of Contributions. Unless You explicitly state otherwise, any Contribution intentionally submitted for inclusion in the Work by You to the Licensor shall be under the terms and conditions of this License, without any additional terms or conditions. Notwithstanding the above, nothing herein shall supersede or modify the terms of any separate license agreement you may have executed with Licensor regarding such Contributions.
+    
+    6. Trademarks. This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor, except as required for reasonable and customary use in describing the origin of the Work and reproducing the content of the NOTICE file.
+    
+    7. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each Contributor provides its Contributions) on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for determining the appropriateness of using or redistributing the Work and assume any risks associated with Your exercise of permissions under this License.
+    
+    8. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall any Contributor be liable to You for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the use or inability to use the Work (including but not limited to damages for loss of goodwill, work stoppage, computer failure or malfunction, or any and all other commercial damages or losses), even if such Contributor has been advised of the possibility of such damages.
+    
+    9. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your accepting any such warranty or additional liability.
+    
+    END OF TERMS AND CONDITIONS
+    
+    APPENDIX: How to apply the Apache License to your work.
+    
+        To apply the Apache License to your work, attach the following boilerplate notice, with the fields enclosed by brackets "[]" replaced with your own identifying information. (Don't include the brackets!)  The text should be enclosed in the appropriate comment syntax for the file format. We also recommend that a file or class name and description of purpose be included on the same "printed page" as the copyright notice for easier identification within third-party archives.
+    
+        <center>Copyright 2020 Schneider Electric</center>
+    
+    Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+    
+        http://www.apache.org/licenses/LICENSE-2.0
+    
+    Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+                                                 
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </section>
+                <section id="se-node-help" class="tab-panel">
+                    <!-- US 16117 Changed as per SSG Team -->
+                    <h2> Please <a href="/modbus/Modbus_Tag_Help_Manual" target="_blank">click here</a> to view the SE Modbus User Manual. </h2>
+                </section>
+            </div>
+        </div>
+        
+            
+        </script>
+    

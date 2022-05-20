@@ -1,0 +1,452 @@
+<!--Register Node Type-->
+
+<style>
+    .whiteColor {
+        fill: #000 !important;
+        font-family:Nunito Regular;
+    }
+</style>
+
+<script type="text/javascript">
+    RED.nodes.registerType('SE_Aveva_Insight', {
+        category: "Cloud Storage",
+        color: "#fff",
+        labelStyle: function() {
+                return this.name?"whiteColor":"";
+            },
+        defaults: {
+            name: { value: "SEAvevaInsight" },
+			version: {value: "2.1.0"},
+              // <!--Defect 162152-->
+            useProxy: { value: "select" },
+           // <!--Defect 162152-->
+		   url: { value: "", required: true, validate: function(val){
+				if(val){
+					if(val.indexOf('http://') == 0 || val.indexOf('https://') ==0){
+						return true;
+					} else {
+						alert("SEAvevaInsight: Incorrect value for URL Field");
+						return false;
+					}
+				}
+			  }
+            },
+            // <!--Defect 12746 -->
+            proxy: { value: "", validate: function(val){
+                return validateProxy(val);
+              }
+            },
+            timeout:{value:"120",required: !0, validate: function(val){
+                if(RED.validators.number() && (val >= 120 && val <=300)){
+                    return true;
+                 }
+                 else{
+                    alert("SEAvevaInsight: Incorrect value for Timeout Field");
+                    return true;
+                 }
+              }
+            },
+
+            logging: {value:"1" },
+            loggingLevel: {value:"error" },
+            fileSize: {value: "10"},
+            sizeUnit: {value: "MB"},
+        },
+		credentials: {
+            token: { type: "password", required: true }
+		},
+        inputs: 1,
+        outputs: 1,
+        icon: "avevaOnline.png",
+        align: "left",
+        paletteLabel: "SEAvevaInsight",
+        label: function () {
+            return this.name || "";
+        },
+
+        oneditprepare: function () {
+            let node = this;
+            let useProxySelector = $('#node-input-useProxy')
+            let inputProxy = $("#proxydivision")
+            let loggingDivision = $("#loggingDivision");
+            let loggingSelector  =$('#node-input-logging');
+            loggingSelector.change(function () {
+                if (loggingSelector.val() == '1') {
+                    loggingDivision.show();
+                } else {
+                    loggingDivision.hide();
+                }
+            });
+            
+            useProxySelector.change(function () {
+                if (useProxySelector.val() == 'yes') {
+                    inputProxy.show();
+                    node.proxy.required = true;
+                } else {
+                    inputProxy.hide();
+                    node.proxy.required = false;
+                }
+            });
+        }
+    });
+    // <!--Defect 12746 -->
+    function validateProxy(proxy){
+        let isProxy = $('#node-input-useProxy').val();
+        if(isProxy == 'yes'){
+            if(proxy == ""){
+                return false;
+            } else {
+                if(proxy.indexOf('http://') == 0 || proxy.indexOf('https://')== 0){
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        } else {
+            return true;
+        }
+    }
+</script>
+
+<script type="text/x-red" data-template-name="SE_Aveva_Insight">
+    <div style="background:#32963f !important; height:25px;padding:5px;">
+        <label style="color:white !important; font-weight:bold !important; margin-left:35%;padding-top:1%"> Schneider Electric </label>
+    </div>
+	<!--Page Break-->
+    <br>
+
+    <div class="form-row">
+        <label for="node-input-name"><i class="icon-tag"></i> Name</label>
+         <input type="text" id="node-input-name" placeholder="Name" maxlength="32" onkeypress="return validateName(event) >
+    </div>
+	<div class="form-row">
+        <for="node-input-version">
+    </div>
+    <div class="form-row">
+        <label for="node-input- "><i class="fa fa-external-link"></i> URL</label>
+        <input type="text" id="node-input-url" placeholder="URL for the DataSource">
+    </div>
+    <div class="form-row">
+        <label for="node-input-token"><i class="fa fa-bookmark"></i> Token</label>
+        <input type="password" id="node-input-token" placeholder="Bearer Token of the DataSource">
+    </div>
+    <div class="form-row">
+        <label for="node-input-useProxy"><i class="fa fa-random"></i> Use Proxy</label>
+        <select type='text' id='node-input-useProxy'>
+            <option value='select' select>Select</option>
+            <option value='yes'>Yes</option>
+            <option value='no' >No</option>
+        </select>
+    </div>
+    <div class="form-row" id="proxydivision">
+        <label for="node-input-proxy"><i class="fa fa-external-link"></i> Proxy</label>
+        <input type="text" id="node-input-proxy" placeholder="Proxy for the gateway">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-timeout"><i class="icon-bookmark"></i> Timeout </label>
+        <input type="number" id="node-input-timeout" placeholder="120-300" style="max-width:120px" min = 120 max = 300>
+        <label id="node-input-timeUnit" style="max-width:160px">
+            <option value="s">second(s)</option>
+        </select>
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-logging"><i class="fa fa-random"></i> Logging</label>
+        <select type='text' id='node-input-logging'>
+            <option value="1">Enable</option>
+            <option value="2">Disable</option>
+        </select>
+    </div>
+
+    <div class="form-row" id="loggingDivision">
+        <div class="form-row">
+            <label for="node-input-loggingLevel"><i class="fa fa-random"></i> Level</label>
+            <select type='text' id='node-input-loggingLevel'>
+                <option value="error">Alert Only</option>
+                <option value="info">All Events</option>
+                
+            </select>
+        </div>
+    </div>
+
+</script>
+<script type="text/x-red" data-help-name="SE_Aveva_Insight">
+    <div class="tabset">
+        <input type="radio" name="tabset" id="h-tab1" aria-controls="se-node-license" checked>
+        <label for="h-tab1">LICENSE</label>
+        <input type="radio" name="tabset" id="h-tab2" aria-controls="se-node-help">
+        <label for="h-tab2">HELP</label>
+    
+        <div class="tab-panels">
+            <section id="se-node-license" class="tab-panel">
+                <div style="padding: 10px 5px;text-align: justify;">
+                    <center><h2>INFORMATION</h2></center>
+                    <center>Open Source Software used in The SE Aveva Insight node</center>
+                    <br>
+                    <br> The SE Aveva Insight node contains, among other things, Open Source Software files, as specified below, developed by third parties and licensed under an Open Source Software license. These Open Source Software files are protected by copyright. Your right to use the Open Source Software is governed by the relevant applicable Open Source Software license conditions.
+                    <br>
+                    <br> Warranty regarding use of the Open Source Software:
+                    <br>
+                    <br> The following disclaimer applies to the GPL and LGPL components (if any) in relation to the rights holders: “this program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE”. See the GNU General Public License or the GNU Lesser General Public License for more details.
+                    <br>
+                    <br> For the remaining open source components, the liability exclusions of the rights holders apply as per the respective license.
+                    <br>
+                    <br> Schneider Electric SE and all of its subsidiaries (“Schneider Electric Group”) provide no warranty for the Open Source Software contained in The SE Aveva Insight node, if such Open Source Software is used in any manner other than intended by Schneider Electric Group. The licenses listed below define the warranty, if any, from the rights holders of the Open Source Software. Schneider Electric Group specifically disclaims any warranty for defects caused by altering any Open Source Software or The SE Aveva Insight node's configuration. Any warranty claims against Schneider Electric Group in the event that the Open Source Software contained in The SE Aveva Insight node infringes the intellectual property rights of a third party are excluded.
+                    <br> Technical support, if any, will only be provided for unmodified software.
+                    <br>
+                    <br> Further use of Open Source Software:
+                    <br>
+                    <br> Your compliance with those license conditions will entitle you to use the Open Source Software as foreseen in the relevant license. In the event of conflicts between other Schneider Electric license conditions applicable to The SE Aveva Insight node and the Open Source Software license conditions, the Open Source Software conditions shall prevail. The Open Source Software is provided royalty-free (i.e. no fees are charged for exercising the licensed rights). The following Open Source Software is contained in The SE Aveva Insight node:
+                    <br>
+                    <br>
+                    <table class="licenseTable">
+                        <tr>
+                            <th>Open Source Software file</th>
+                            <th>License</th>
+                            <th>Source Link</th>
+                        </tr>
+                        <tr>
+                            <td>node-json-db </td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/node-json-db</td>
+                        </tr>
+                        <tr>
+                            <td>request</td>
+                            <td>Apache-2.0</td>
+                            <td>https://www.npmjs.com/package/request</td>
+                        </tr>
+                        <tr>
+                            <td>Winston</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/winston</td>
+                        </tr>
+                        <tr>
+                            <td>json-size</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/json-size</td>
+                        </tr>
+                        <tr>
+                            <td>jsonfile</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/jsonfile</td>
+                        </tr>
+                        <tr>
+                            <td>pdfreader</td>
+                            <td>MIT</td>
+                            <td>https://www.npmjs.com/package/pdfreader</td>
+                        </tr>
+                    </table>
+    
+                    <br>
+                    <br> The respective license terms for the respective Open Source Software files can be found at the end of this document.
+                    <br>
+                    <br> If any Open Source Software contained in The SE Aveva Insight node is licensed under GNU General Public License (GPL), GNU Lesser General Public License (LGPL), Mozilla Public License (MPL) or any other Open Source Software license, which requires that source code is to be made available, you can download the corresponding source code of the Open Source Software from the aforementioned link.
+                    <br>
+                    <br>
+                    <table class="licenseDetails">
+                        <tr>
+                            <th>The Licenses in detail</th>
+                        </tr>
+                        <tr>
+                            <td>
+                                <table>
+                                    <tr>
+                                        <th class="sub">MIT License</th>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <center>Copyright &copy; 2020 Schneider Electric</center>
+                                            <br>
+                                            <br> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+                                            <br>
+                                            <br> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+                                            <br>
+                                            <br> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+                                            <br>
+                                            <br>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <table>
+                                    <tr>
+                                        <th class="sub">Apache-2.0 License</th>
+                                    </tr>
+                                    <tr>
+                                        <td style="white-space: pre-wrap;">
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. Definitions.
+
+    "License" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.
+
+    "Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.
+
+    "Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, "control" means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.
+
+    "You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License.
+
+    "Source" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.
+
+    "Object" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.
+
+    "Work" shall mean the work of authorship, whether in Source or
+    Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below).
+
+    "Derivative Works" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof.
+
+    "Contribution" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, "submitted" means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as "Not a Contribution."
+
+    "Contributor" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and subsequently incorporated within the Work.
+
+2. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, publicly display, publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or Object form.
+
+3. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor that are necessarily infringed by their Contribution(s) alone or by combination of their Contribution(s) with the Work to which such Contribution(s) was submitted. If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Work or a Contribution incorporated within the Work constitutes direct or contributory patent infringement, then any patent licenses granted to You under this License for that Work shall terminate as of the date such litigation is filed.
+
+4. Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without modifications, and in Source or Object form, provided that You meet the following conditions:
+
+    (a) You must give any other recipients of the Work or Derivative Works a copy of this License; and
+
+    (b) You must cause any modified files to carry prominent notices stating that You changed the files; and
+
+    (c) You must retain, in the Source form of any Derivative Works that You distribute, all copyright, patent, trademark, and attribution notices from the Source form of the Work, excluding those notices that do not pertain to any part of the Derivative Works; and
+
+    (d) If the Work includes a "NOTICE" text file as part of its distribution, then any Derivative Works that You distribute must include a readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, provided that such additional attribution notices cannot be construed as modifying the License.
+
+    You may add Your own copyright statement to Your modifications and may provide additional or different license terms and conditions for use, reproduction, or distribution of Your modifications, or for any such Derivative Works as a whole, provided Your use, reproduction, and distribution of the Work otherwise complies with the conditions stated in this License.
+
+5. Submission of Contributions. Unless You explicitly state otherwise, any Contribution intentionally submitted for inclusion in the Work by You to the Licensor shall be under the terms and conditions of this License, without any additional terms or conditions. Notwithstanding the above, nothing herein shall supersede or modify the terms of any separate license agreement you may have executed with Licensor regarding such Contributions.
+
+6. Trademarks. This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor, except as required for reasonable and customary use in describing the origin of the Work and reproducing the content of the NOTICE file.
+
+7. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each Contributor provides its Contributions) on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for determining the appropriateness of using or redistributing the Work and assume any risks associated with Your exercise of permissions under this License.
+
+8. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall any Contributor be liable to You for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the use or inability to use the Work (including but not limited to damages for loss of goodwill, work stoppage, computer failure or malfunction, or any and all other commercial damages or losses), even if such Contributor has been advised of the possibility of such damages.
+
+9. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your accepting any such warranty or additional liability.
+
+END OF TERMS AND CONDITIONS
+
+APPENDIX: How to apply the Apache License to your work.
+
+    To apply the Apache License to your work, attach the following boilerplate notice, with the fields enclosed by brackets "[]" replaced with your own identifying information. (Don't include the brackets!)  The text should be enclosed in the appropriate comment syntax for the file format. We also recommend that a file or class name and description of purpose be included on the same "printed page" as the copyright notice for easier identification within third-party archives.
+
+    <center>Copyright &copy; 2020 Schneider Electric</center>
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+                                             
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </section>
+            <section id="se-node-help" class="tab-panel">
+                <!-- TS 16103 Changed as per SSG Team -->
+                <!-- EN - 32265 -->
+                <h2> Please <a href="/aveva/Aveva_Insight_Help_Manual" target="_blank" rel="noopener noreferrer">click here</a> to view the SE Aveva Insight User Manual. </h2>
+            </section>
+        </div>
+    </div>
+    </script>
+<style>
+.licenseTable {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.licenseTable td, .licenseTable th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+.licenseTable tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+
+.licenseDetails {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.licenseDetails td, .licenseDetails th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+.licenseDetails th.sub {
+  background: #000;;
+  color: #fff;
+}
+/*
+ CSS for the help tabs
+*/
+.tabset > input[type="radio"] {
+  position: absolute;
+  left: -200vw;
+}
+
+.tabset .tab-panel {
+  display: none;
+}
+
+.tabset > input:first-child:checked ~ .tab-panels > .tab-panel:first-child,
+.tabset > input:nth-child(3):checked ~ .tab-panels > .tab-panel:nth-child(2),
+.tabset > input:nth-child(5):checked ~ .tab-panels > .tab-panel:nth-child(3),
+.tabset > input:nth-child(7):checked ~ .tab-panels > .tab-panel:nth-child(4),
+.tabset > input:nth-child(9):checked ~ .tab-panels > .tab-panel:nth-child(5),
+.tabset > input:nth-child(11):checked ~ .tab-panels > .tab-panel:nth-child(6) {
+  display: block;
+}
+
+.tabset > label {
+    position: relative;
+    display: inline-block;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    cursor: pointer;
+    font-weight: 600;
+    width: 45%;
+    text-align: center;
+}
+
+.tabset > label:hover,
+.tabset > input:checked + label,
+.tabset > input:focus + label {
+  color: #06c;
+}
+
+
+.tabset > input:checked + label {
+  border-color: #ccc;
+  border-bottom: 1px solid #fff;
+  margin-bottom: -1px;
+}
+
+.tab-panel {
+  padding: 2px 0;
+  border-top: 1px solid #ccc;
+}
+</style>
+<script>
+    function validateName(evt){
+        var charCode = (evt.which) ? evt.which : event.keyCode;
+        if ((charCode > 45 && charCode < 123) || (charCode == 189 || charCode == 190 || charCode == 32))
+            return true;
+        return false;
+    }
+</script>

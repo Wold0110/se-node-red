@@ -1,0 +1,14 @@
+{
+  "modbus-contrib": {
+    "label": {
+      "showActivities": "Show Activities",
+      "showErrors": "Show Errors",
+      "sensorType":"Sensor Type",
+      "server": "Server",
+      "macAddress":"MacAddress",
+      "timeout":"Timeout",
+      "rssi":"RSSI",
+      "timestamp":"Time stamp"
+    }
+  }
+}

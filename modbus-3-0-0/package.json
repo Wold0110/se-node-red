@@ -1,0 +1,34 @@
+{
+	"name": "se-node-red-modbus",
+	"version": "3.0.0",
+	"description": "Modbus nodes package - SE Modbus Read, SE Modbus Write and SE Modbus Tag nodes read data from and write data into devices supporting modbus protocol.",
+	"main": "none",
+	"keywords": [
+		"node-red",
+		"schneider",
+		"modbus",
+		"modbus-serial",
+		"serial",
+		"modbus-tcp"
+	],
+	"node-red": {
+		"nodes": {
+			"SE_Modbus-Read": "nodes/SE_Modbus-Read.js",
+			"SE_Modbus-Write": "nodes/SE_Modbus-Write.js",
+			"SE_Modbus-Tag": "nodes/SE_Modbus-Tag.js",
+			"SE_Modbus-Client": "nodes/SE_Modbus-Client.js"
+		}
+	},
+	"author": "Schneider Electric",
+	"license": "Schneider Electric",
+	"dependencies": {
+		"debug": "*",
+		"fs-extra": "^4.0.2",
+		"modbus-serial": "7.4.2",
+		"path": "*",
+		"pdfreader": "^1.0.6",
+		"stampit": "2.1.2",
+		"stately.js": "1.3.0",
+		"winston": "2.4.0"
+	}
+}
