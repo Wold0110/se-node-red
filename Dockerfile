@@ -6,11 +6,11 @@ LABEL maintainer="walter20020110@gmail.com"
     ENV http_proxy=http://165.225.200.15:80
     ENV https_proxy=http://165.225.200.15:80
     ENV NODE_TLS_REJECT_UNAUTHORIZED=0
-    ENV SE=/data/se-nodes
+    ENV SE=/se-nodes
 
 #switch to 'root'
     USER root
-
+	RUN mkdir ${SE}
 #packages
     RUN npm config set strict-ssl false
     RUN npm install node-red-dashboard
